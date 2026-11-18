@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+.<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -417,7 +417,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v6';
+        const STORAGE_KEY = 'docx_messenger_state_v7';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -689,7 +689,6 @@
         function closeMobileChat() {
             document.body.classList.remove('mobile-chat-open');
         }
-
         function renderMessages() {
             const box = document.getElementById('messagesBox');
             const chat = appState.chats.find(c => c.id === appState.activeChatId);
@@ -765,47 +764,37 @@
 
         bootApp();
     </script>
-    <!-- Прямое подключение к Firebase Firestore без внешних скриптов (работает без VPN) -->
+    <!-- Прямое подключение к Supabase REST API (работает в РФ без VPN) -->
     <script>
-        const FIREBASE_PROJECT_ID = "docx-messenger2026";
-        const FIRESTORE_BASE_URL = `https://googleapis.com{FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+        // ВСТАВЬТЕ СЮДА ВАШ PROJECT URL ИЗ SUPABASE (Project Settings -> Data API)
+        const SUPABASE_URL = "https://ВАШ_ПРОЕКТ.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_xnfNecTRHs8WRt-pCQepyg_2JlGhptb";
+
+        const SB_HEADERS = {
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+            "Content-Type": "application/json",
+            "Prefer": "resolution=merge-duplicates"
+        };
+
         let chatPollingTimer = null;
-
-        function toFirestoreFields(obj) {
-            const fields = {};
-            for (const [k, v] of Object.entries(obj)) {
-                if (typeof v === 'number') fields[k] = { integerValue: String(v) };
-                else fields[k] = { stringValue: String(v || '') };
-            }
-            return { fields };
-        }
-
-        function fromFirestoreDoc(doc) {
-            const res = {};
-            if (!doc || !doc.fields) return res;
-            for (const [k, v] of Object.entries(doc.fields)) {
-                res[k] = v.stringValue ?? v.integerValue ?? '';
-            }
-            return res;
-        }
 
         // Регистрация / обновление профиля в облаке для поиска
         window.syncUserToCloud = async function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
-            const userDocId = encodeURIComponent(appState.user.phone.toLowerCase().trim());
-            const payload = toFirestoreFields({
-                name: appState.user.name,
-                phone: appState.user.phone,
-                bio: appState.user.bio || '',
-                avatarEmoji: appState.user.avatar.type === 'emoji' ? appState.user.avatar.value : '',
-                updatedAt: Date.now()
-            });
+            const cleanPhone = appState.user.phone.toLowerCase().trim();
 
             try {
-                await fetch(`${FIRESTORE_BASE_URL}/docx_users/${userDocId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                await fetch(`${SUPABASE_URL}/rest/v1/docx_users`, {
+                    method: "POST",
+                    headers: SB_HEADERS,
+                    body: JSON.stringify({
+                        phone: cleanPhone,
+                        name: appState.user.name,
+                        bio: appState.user.bio || "",
+                        avatar_emoji: appState.user.avatar.type === "emoji" ? appState.user.avatar.value : "",
+                        updated_at: Date.now()
+                    })
                 });
             } catch (e) {
                 console.warn("Ошибка синхронизации профиля:", e);
@@ -820,20 +809,22 @@
 
             try {
                 await window.syncUserToCloud();
-                const res = await fetch(`${FIRESTORE_BASE_URL}/docx_users?pageSize=100`);
-                const data = await res.json();
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/docx_users?select=*&limit=100`, {
+                    headers: SB_HEADERS
+                });
 
-                if (data.error) {
-                    throw new Error(data.error.message || "Ошибка правил Firestore");
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.message || "Ошибка запроса к Supabase");
                 }
 
-                const users = (data.documents || []).map(fromFirestoreDoc).filter(u =>
-                    u.phone && u.phone.toLowerCase().trim() !== appState.user.phone.toLowerCase().trim()
-                );
+                const users = await res.json();
+                const myPhone = appState.user.phone.toLowerCase().trim();
 
                 const filtered = users.filter(u =>
-                    (u.name && u.name.toLowerCase().includes(qText)) ||
-                    (u.phone && u.phone.toLowerCase().includes(qText))
+                    u.phone && u.phone.toLowerCase().trim() !== myPhone &&
+                    ((u.name && u.name.toLowerCase().includes(qText)) ||
+                     (u.phone && u.phone.toLowerCase().includes(qText)))
                 );
 
                 if (filtered.length === 0) {
@@ -849,8 +840,13 @@
                 filtered.forEach(u => {
                     const card = document.createElement('div');
                     card.className = 'found-user-card';
-                    card.onclick = () => startDirectChat(u);
-                    const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
+                    card.onclick = () => startDirectChat({
+                        name: u.name,
+                        phone: u.phone,
+                        bio: u.bio,
+                        avatarEmoji: u.avatar_emoji
+                    });
+                    const badge = u.avatar_emoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
                     card.innerHTML = `
                         <div class="avatar">${badge}</div>
                         <div style="flex:1; min-width:0;">
@@ -864,7 +860,7 @@
             } catch (e) {
                 container.innerHTML = `
                     <div style="text-align:center; color:#fb7185; font-size:0.85rem; padding:12px;">
-                        Не удалось загрузить список: ${e.message}<br>
+                        Ошибка: ${e.message}<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Повторить</button>
                     </div>`;
             }
@@ -889,47 +885,47 @@
             });
         }
 
-        // Отправка текста или фото в облачный чат
+        // Отправка текста или фото в облачный чат Supabase
         window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
-            const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
+            const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const payload = toFirestoreFields({
-                senderName: appState.user.name,
-                senderPhone: appState.user.phone,
-                text: text || '',
-                image: imageBase64 || '',
-                timeStr: nowStr,
-                timestamp: Date.now()
-            });
 
-            await fetch(`${FIRESTORE_BASE_URL}/docx_chats/${roomId}/messages`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            await fetch(`${SUPABASE_URL}/rest/v1/docx_messages`, {
+                method: "POST",
+                headers: SB_HEADERS,
+                body: JSON.stringify({
+                    room_id: roomId,
+                    sender_name: appState.user.name,
+                    sender_phone: appState.user.phone,
+                    text: text || "",
+                    image: imageBase64 || "",
+                    time_str: nowStr,
+                    timestamp: Date.now()
+                })
             });
         };
 
-        // Получение новых сообщений из облака каждые 2 секунды
+        // Получение новых сообщений из Supabase каждые 2 секунды
         window.subscribeToCloudChat = function(targetRoomKey) {
             if (chatPollingTimer) clearInterval(chatPollingTimer);
             const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
 
             const fetchMessages = async () => {
                 try {
-                    const res = await fetch(`${FIRESTORE_BASE_URL}/docx_chats/${roomId}/messages?pageSize=100`);
-                    const data = await res.json();
-                    if (!data.documents) return;
+                    const res = await fetch(`${SUPABASE_URL}/rest/v1/docx_messages?room_id=eq.${roomId}&order=timestamp.asc&limit=100`, {
+                        headers: SB_HEADERS
+                    });
+                    if (!res.ok) return;
+                    const rawMsgs = await res.json();
 
-                    const rawMsgs = data.documents.map(fromFirestoreDoc);
-                    rawMsgs.sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
-
+                    const myPhone = appState.user.phone.toLowerCase().trim();
                     const cloudMessages = rawMsgs.map(m => {
-                        const isMe = m.senderPhone === appState.user.phone;
+                        const isMe = (m.sender_phone || '').toLowerCase().trim() === myPhone;
                         return {
-                            text: isMe ? m.text : `<b>${m.senderName}:</b> ${m.text}`,
+                            text: isMe ? m.text : `<b>${m.sender_name}:</b> ${m.text}`,
                             image: m.image || null,
                             type: isMe ? 'out' : 'in',
-                            time: m.timeStr || ''
+                            time: m.time_str || ''
                         };
                     });
 
