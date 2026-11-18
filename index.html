@@ -804,7 +804,7 @@
             return concatBytes([new Uint8Array([headerByte]), encodeRemainingLength(body.length), body]);
         }
 
-        function parseIncomingPackets(buf) {
+                function parseIncomingPackets(buf) {
             let i = 0;
             while (i < buf.length) {
                 const header = buf.at(i);
@@ -827,7 +827,7 @@
                     wsConnected = true;
                     console.log("DOCX Облако подключено (EMQX WebSocket)");
                     wsClient.send(buildSubscribePacket(APP_PREFIX + S + "presence" + S + "#"));
-                    wsClient.send(buildSubscribePacket(APP_PREFIX + S + "rooms" + S + "#"));
+                    wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
                     window.syncUserToCloud();
                 } else if (type === 3) {
                     const tLen = (packetBody.at(0) << 8) | packetBody.at(1);
@@ -844,7 +844,6 @@
             try {
                 const data = JSON.parse(rawPayload);
                 const presencePrefix = APP_PREFIX + S + "presence" + S;
-                const roomsPrefix = APP_PREFIX + S + "rooms" + S;
 
                 if (topic.startsWith(presencePrefix)) {
                     if (data && data.phone) {
@@ -853,8 +852,8 @@
                     return;
                 }
 
-                if (topic.startsWith(roomsPrefix)) {
-                    const roomId = topic.replace(roomsPrefix, "");
+                if (topic === APP_PREFIX + S + "global_bus" && data && data.roomId) {
+                    const roomId = data.roomId.toLowerCase().trim();
                     const myPhone = appState.user.phone.toLowerCase().trim();
                     const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
 
@@ -904,6 +903,7 @@
                 console.warn("Ошибка разбора пакета:", e);
             }
         }
+
         function initBuiltInCloud() {
             wsConnected = false;
             wsClient = new WebSocket(BROKER_URL, "mqtt");
@@ -995,7 +995,7 @@
             wsClient.send(buildSubscribePacket(APP_PREFIX + S + "rooms" + S + roomId));
         };
 
-        window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
+               window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
             if (!wsConnected) {
                 alert("Нет соединения с облаком. Подождите 2 секунды и повторите.");
                 return;
@@ -1005,6 +1005,7 @@
 
             const payload = {
                 msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
+                roomId: roomId,
                 senderName: appState.user.name,
                 senderPhone: appState.user.phone,
                 text: text || "",
@@ -1013,9 +1014,10 @@
                 timestamp: Date.now()
             };
 
-            const topic = APP_PREFIX + S + "rooms" + S + roomId;
+            const topic = APP_PREFIX + S + "global_bus";
             wsClient.send(buildPublishPacket(topic, JSON.stringify(payload), false));
         };
+ 
 
         function compressImage(file, maxWidth = 450, quality = 0.65) {
             return new Promise((resolve) => {
