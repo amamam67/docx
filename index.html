@@ -417,7 +417,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v5';
+        const STORAGE_KEY = 'docx_messenger_state_v6';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -765,68 +765,71 @@
 
         bootApp();
     </script>
-        <!-- Облачная синхронизация Firebase Firestore -->
-    <script type="module">
-        import { initializeApp } from "https://gstatic.com";
-        import { getFirestore, collection, doc, setDoc, getDocs, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://gstatic.com";
+    <!-- Прямое подключение к Firebase Firestore без внешних скриптов (работает без VPN) -->
+    <script>
+        const FIREBASE_PROJECT_ID = "docx-messenger2026";
+        const FIRESTORE_BASE_URL = `https://googleapis.com{FIREBASE_PROJECT_ID}/databases/(default)/documents`;
+        let chatPollingTimer = null;
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAZWgBuCzo-_g94ajwHLFjyA0jqyxirT7Q",
-            authDomain: "://firebaseapp.com",
-            projectId: "docx-messenger2026",
-            storageBucket: "docx-messenger2026.firebasestorage.app",
-            messagingSenderId: "1091321825024",
-            appId: "1:1091321825024:web:d412f1f5f334420b2595e5"
-        };
+        function toFirestoreFields(obj) {
+            const fields = {};
+            for (const [k, v] of Object.entries(obj)) {
+                if (typeof v === 'number') fields[k] = { integerValue: String(v) };
+                else fields[k] = { stringValue: String(v || '') };
+            }
+            return { fields };
+        }
 
-        const firebaseApp = initializeApp(firebaseConfig);
-        const db = getFirestore(firebaseApp);
-        let unsubscribeCurrentChat = null;
+        function fromFirestoreDoc(doc) {
+            const res = {};
+            if (!doc || !doc.fields) return res;
+            for (const [k, v] of Object.entries(doc.fields)) {
+                res[k] = v.stringValue ?? v.integerValue ?? '';
+            }
+            return res;
+        }
 
-        // Регистрация / обновление профиля пользователя в облаке
+        // Регистрация / обновление профиля в облаке для поиска
         window.syncUserToCloud = async function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
             const userDocId = encodeURIComponent(appState.user.phone.toLowerCase().trim());
+            const payload = toFirestoreFields({
+                name: appState.user.name,
+                phone: appState.user.phone,
+                bio: appState.user.bio || '',
+                avatarEmoji: appState.user.avatar.type === 'emoji' ? appState.user.avatar.value : '',
+                updatedAt: Date.now()
+            });
+
             try {
-                await setDoc(doc(db, "docx_users", userDocId), {
-                    name: appState.user.name,
-                    phone: appState.user.phone,
-                    bio: appState.user.bio || '',
-                    avatarEmoji: appState.user.avatar.type === 'emoji' ? appState.user.avatar.value : '',
-                    updatedAt: serverTimestamp()
-                }, { merge: true });
+                await fetch(`${FIRESTORE_BASE_URL}/docx_users/${userDocId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
             } catch (e) {
-                console.error("Ошибка записи профиля в Firestore:", e);
+                console.warn("Ошибка синхронизации профиля:", e);
             }
         };
 
-        // Поиск пользователей с защитой от бесконечной загрузки
+        // Поиск зарегистрированных пользователей по @username, телефону или имени
         window.searchCloudUsers = async function() {
             const container = document.getElementById('userSearchResults');
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
-            container.innerHTML = '<div style="text-align:center; color:var(--accent); font-size:0.85rem; padding:14px;">Загрузка списка пользователей...</div>';
+            container.innerHTML = '<div style="text-align:center; color:var(--accent); font-size:0.85rem; padding:14px;">Поиск в базе DOCX...</div>';
 
             try {
-                // Сначала убедимся, что текущий пользователь записан в базу
                 await window.syncUserToCloud();
+                const res = await fetch(`${FIRESTORE_BASE_URL}/docx_users?pageSize=100`);
+                const data = await res.json();
 
-                // Запрос к базе с таймаутом 7 секунд
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("timeout")), 7000)
+                if (data.error) {
+                    throw new Error(data.error.message || "Ошибка правил Firestore");
+                }
+
+                const users = (data.documents || []).map(fromFirestoreDoc).filter(u =>
+                    u.phone && u.phone.toLowerCase().trim() !== appState.user.phone.toLowerCase().trim()
                 );
-
-                const snap = await Promise.race([
-                    getDocs(collection(db, "docx_users")),
-                    timeoutPromise
-                ]);
-
-                const users = [];
-                snap.forEach(d => {
-                    const u = d.data();
-                    if (u.phone && u.phone.toLowerCase().trim() !== appState.user.phone.toLowerCase().trim()) {
-                        users.push(u);
-                    }
-                });
 
                 const filtered = users.filter(u =>
                     (u.name && u.name.toLowerCase().includes(qText)) ||
@@ -859,20 +862,15 @@
                     container.appendChild(card);
                 });
             } catch (e) {
-                console.error("Ошибка поиска:", e);
-                const msg = e.message === "timeout"
-                    ? "Сервер Google Firebase долго отвечает. Попробуйте включить VPN или нажмите «Повторить»."
-                    : "Нет доступа к коллекции docx_users. Проверьте вкладку Rules в Firebase!";
                 container.innerHTML = `
                     <div style="text-align:center; color:#fb7185; font-size:0.85rem; padding:12px;">
-                        ${msg}<br>
+                        Не удалось загрузить список: ${e.message}<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Повторить</button>
                     </div>`;
             }
         };
-
-        // Сжатие фото перед отправкой в Firestore
-        function compressImage(file, maxWidth = 800, quality = 0.75) {
+        // Сжатие фото перед отправкой (до 600px)
+        function compressImage(file, maxWidth = 600, quality = 0.7) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -891,50 +889,66 @@
             });
         }
 
-        // Отправка текста или фото в облачную комнату
+        // Отправка текста или фото в облачный чат
         window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
             const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
-            await addDoc(collection(db, "docx_chats", roomId, "messages"), {
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const payload = toFirestoreFields({
                 senderName: appState.user.name,
                 senderPhone: appState.user.phone,
                 text: text || '',
-                image: imageBase64 || null,
-                createdAt: serverTimestamp()
+                image: imageBase64 || '',
+                timeStr: nowStr,
+                timestamp: Date.now()
+            });
+
+            await fetch(`${FIRESTORE_BASE_URL}/docx_chats/${roomId}/messages`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
         };
 
-        // Подписка на сообщения выбранного чата в реальном времени
+        // Получение новых сообщений из облака каждые 2 секунды
         window.subscribeToCloudChat = function(targetRoomKey) {
-            if (unsubscribeCurrentChat) unsubscribeCurrentChat();
+            if (chatPollingTimer) clearInterval(chatPollingTimer);
             const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
-            const q = query(collection(db, "docx_chats", roomId, "messages"), orderBy("createdAt", "asc"));
 
-            unsubscribeCurrentChat = onSnapshot(q, (snapshot) => {
-                const cloudMessages = [];
-                snapshot.forEach((docSnap) => {
-                    const data = docSnap.data();
-                    const isMe = data.senderPhone === appState.user.phone;
-                    const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
-                    const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const fetchMessages = async () => {
+                try {
+                    const res = await fetch(`${FIRESTORE_BASE_URL}/docx_chats/${roomId}/messages?pageSize=100`);
+                    const data = await res.json();
+                    if (!data.documents) return;
 
-                    cloudMessages.push({
-                        text: isMe ? data.text : `<b>${data.senderName}:</b> ${data.text}`,
-                        image: data.image || null,
-                        type: isMe ? 'out' : 'in',
-                        time: timeStr
+                    const rawMsgs = data.documents.map(fromFirestoreDoc);
+                    rawMsgs.sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+
+                    const cloudMessages = rawMsgs.map(m => {
+                        const isMe = m.senderPhone === appState.user.phone;
+                        return {
+                            text: isMe ? m.text : `<b>${m.senderName}:</b> ${m.text}`,
+                            image: m.image || null,
+                            type: isMe ? 'out' : 'in',
+                            time: m.timeStr || ''
+                        };
                     });
-                });
 
-                const chat = appState.chats.find(c => (c.roomId || c.name) === targetRoomKey);
-                if (chat && cloudMessages.length > 0) {
-                    chat.messages = cloudMessages;
-                    saveState();
-                    if (appState.activeChatId === chat.id) {
-                        renderMessages();
+                    const chat = appState.chats.find(c => (c.roomId || c.name) === targetRoomKey);
+                    if (chat && cloudMessages.length > 0 && cloudMessages.length !== chat.messages.length) {
+                        chat.messages = cloudMessages;
+                        saveState();
+                        if (appState.activeChatId === chat.id) {
+                            renderMessages();
+                        }
+                        renderChatList();
                     }
-                    renderChatList();
+                } catch (e) {
+                    console.warn("Ошибка проверки сообщений:", e);
                 }
-            });
+            };
+
+            fetchMessages();
+            chatPollingTimer = setInterval(fetchMessages, 2000);
         };
 
         // Отправка сжатой фотографии по кнопке скрепки
@@ -957,11 +971,7 @@
             await window.sendCloudPayload(targetRoom, '', compressedBase64);
         };
 
-        // Если окно поиска открыли раньше, чем загрузился модуль — запускаем поиск сразу
-        if (document.getElementById('newChatModal').style.display === 'flex') {
-            window.searchCloudUsers();
-        }
-
+        // Автозапуск при открытии страницы
         if (appState.isLoggedIn) {
             window.syncUserToCloud();
             const currentChat = appState.chats.find(c => c.id === appState.activeChatId);
@@ -972,4 +982,3 @@
     </script>
 </body>
 </html>
-
