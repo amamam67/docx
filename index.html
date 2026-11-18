@@ -744,10 +744,11 @@
     </script>
        <!-- Сверхнадёжный WebSocket-канал реального времени (работает в РФ без VPN) -->
     <script>
-        const WS_SERVERS = [
-            "wss://://socketsbay.com",
-            "wss://://postman-echo.com"
+               const WS_SERVERS = [
+            "wss:" + "//://socketsbay.com",
+            "wss:" + "//://postman-echo.com"
         ];
+
         const APP_CHANNEL = "DOCX_APP_2026_SECRET_CHANNEL_991";
         let wsClient = null;
         let wsConnected = false;
