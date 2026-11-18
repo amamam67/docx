@@ -742,8 +742,7 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений и поиск через WebSocket MQTT (работает в РФ без VPN и ключей) -->
-    <script src="https://unpkg.com"></script>
+       <!-- Мгновенная доставка сообщений и поиск через WebSocket MQTT (с резервными зеркалами) -->
     <script>
         const BROKER_URL = "wss://broker.emqx.io:8084/mqtt";
         const APP_PREFIX = "docx_messenger_ru_2026_v1";
@@ -751,87 +750,111 @@
         let onlineUsersMap = {};
         let currentRoomTopic = null;
 
+        function loadMqttLibrary(callback) {
+            if (window.mqtt) { callback(); return; }
+            const mirrors = [
+                "https://jsdelivr.net",
+                "https://cloudflare.com"
+            ];
+            let idx = 0;
+            function tryNext() {
+                if (idx >= mirrors.length) {
+                    console.error("Не удалось загрузить библиотеку связи");
+                    return;
+                }
+                const s = document.createElement("script");
+                s.src = mirrors[idx++];
+                s.onload = callback;
+                s.onerror = tryNext;
+                document.head.appendChild(s);
+            }
+            tryNext();
+        }
+
         function initMqtt() {
-            const clientId = "docx_" + Math.random().toString(16).slice(2, 10);
-            mqttClient = mqtt.connect(BROKER_URL, {
-                clientId: clientId,
-                clean: true,
-                reconnectPeriod: 3000
-            });
+            loadMqttLibrary(() => {
+                const clientId = "docx_" + Math.random().toString(16).slice(2, 10);
+                mqttClient = window.mqtt.connect(BROKER_URL, {
+                    clientId: clientId,
+                    clean: true,
+                    reconnectPeriod: 3000
+                });
 
-            mqttClient.on("connect", () => {
-                console.log("Подключено к облаку DOCX (EMQX WebSocket)");
-                mqttClient.subscribe(`${APP_PREFIX}/presence/#`);
-                const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
-                if (activeChat) {
-                    window.subscribeToCloudChat(activeChat.roomId || activeChat.name);
-                }
-                window.syncUserToCloud();
-            });
-
-            mqttClient.on("message", (topic, payload) => {
-                try {
-                    const data = JSON.parse(payload.toString());
-
-                    if (topic.startsWith(`${APP_PREFIX}/presence/`)) {
-                        if (data && data.phone) {
-                            onlineUsersMap[data.phone.toLowerCase().trim()] = data;
-                        }
-                        return;
+                mqttClient.on("connect", () => {
+                    console.log("Подключено к облаку DOCX (EMQX WebSocket)");
+                    mqttClient.subscribe(`${APP_PREFIX}/presence/#`);
+                    const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+                    if (activeChat) {
+                        window.subscribeToCloudChat(activeChat.roomId || activeChat.name);
                     }
+                    window.syncUserToCloud();
+                });
 
-                    if (topic.startsWith(`${APP_PREFIX}/rooms/`)) {
-                        const roomId = topic.replace(`${APP_PREFIX}/rooms/`, "");
-                        const myPhone = appState.user.phone.toLowerCase().trim();
-                        const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
+                mqttClient.on("message", (topic, payload) => {
+                    try {
+                        const data = JSON.parse(payload.toString());
 
-                        if (isMe) return;
-
-                        let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
-                        if (!chat && roomId.includes("__")) {
-                            const participants = roomId.split("__");
-                            if (!participants.includes(myPhone)) return;
-
-                            chat = {
-                                id: roomId,
-                                roomId: roomId,
-                                name: data.senderName || data.senderPhone,
-                                handle: data.senderPhone,
-                                bio: "Пользователь мессенджера DOCX",
-                                initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
-                                unread: 0,
-                                messages: []
-                            };
-                            appState.chats.unshift(chat);
+                        if (topic.startsWith(`${APP_PREFIX}/presence/`)) {
+                            if (data && data.phone) {
+                                onlineUsersMap[data.phone.toLowerCase().trim()] = data;
+                            }
+                            return;
                         }
 
-                        if (chat) {
-                            if (chat.messages.some(m => m.msgId === data.msgId)) return;
+                        if (topic.startsWith(`${APP_PREFIX}/rooms/`)) {
+                            const roomId = topic.replace(`${APP_PREFIX}/rooms/`, "");
+                            const myPhone = appState.user.phone.toLowerCase().trim();
+                            const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
 
-                            chat.messages.push({
-                                msgId: data.msgId,
-                                text: `<b>${data.senderName}:</b> ${data.text || ""}`,
-                                image: data.image || null,
-                                type: "in",
-                                time: data.timeStr || ""
-                            });
+                            if (isMe) return;
 
-                            if (appState.activeChatId !== chat.id) {
-                                chat.unread = (chat.unread || 0) + 1;
+                            let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+                            if (!chat && roomId.includes("__")) {
+                                const participants = roomId.split("__");
+                                if (!participants.includes(myPhone)) return;
+
+                                chat = {
+                                    id: roomId,
+                                    roomId: roomId,
+                                    name: data.senderName || data.senderPhone,
+                                    handle: data.senderPhone,
+                                    bio: "Пользователь мессенджера DOCX",
+                                    initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
+                                    unread: 0,
+                                    messages: []
+                                };
+                                appState.chats.unshift(chat);
                             }
 
-                            saveState();
-                            if (appState.activeChatId === chat.id) {
-                                renderMessages();
+                            if (chat) {
+                                if (chat.messages.some(m => m.msgId === data.msgId)) return;
+
+                                chat.messages.push({
+                                    msgId: data.msgId,
+                                    text: `<b>${data.senderName}:</b> ${data.text || ""}`,
+                                    image: data.image || null,
+                                    type: "in",
+                                    time: data.timeStr || ""
+                                });
+
+                                if (appState.activeChatId !== chat.id) {
+                                    chat.unread = (chat.unread || 0) + 1;
+                                }
+
+                                saveState();
+                                if (appState.activeChatId === chat.id) {
+                                    renderMessages();
+                                }
+                                renderChatList();
                             }
-                            renderChatList();
                         }
+                    } catch (e) {
+                        console.warn("Ошибка разбора пакета:", e);
                     }
-                } catch (e) {
-                    console.warn("Ошибка разбора пакета:", e);
-                }
+                });
             });
         }
+
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone || !mqttClient || !mqttClient.connected) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
