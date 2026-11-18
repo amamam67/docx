@@ -749,15 +749,19 @@
         bootApp();
     </script>
             <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
-         <!-- Облачная синхронизация через Pantry Cloud (без кэширования) -->
+           <!-- Облачная синхронизация через Pantry Cloud -->
     <script>
-        const PANTRY_URL = "https://getpantry.cloud";
+        const P_HOST = "https://getpantry.cloud";
+        const P_PATH = "/apiv1/pantry/";
+        const P_ID = "16e1cb5f-000e-4748-a931-1c9b122b4302";
+        const P_BASKET = "/basket/docx_data";
+        const PANTRY_URL = P_HOST + P_PATH + P_ID + P_BASKET;
+
         let chatPollingTimer = null;
 
         async function readPantryDb() {
-            const res = await fetch(`${PANTRY_URL}?t=${Date.now()}`, {
-                cache: "no-store"
-            });
+            const res = await fetch(PANTRY_URL + "?t=" + Date.now(), { cache: "no-store" });
+            if (res.status === 429) throw new Error("Слишком частые запросы, подождите 5 секунд");
             const rawText = await res.text();
             try {
                 const parsed = JSON.parse(rawText);
@@ -769,19 +773,12 @@
         }
 
         async function writePantryDb(dbObj) {
-            let res = await fetch(PANTRY_URL, {
-                method: "PUT",
+            const res = await fetch(PANTRY_URL, {
+                method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dbObj)
             });
-            if (!res.ok) {
-                res = await fetch(PANTRY_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(dbObj)
-                });
-            }
-            if (!res.ok) throw new Error("Не удалось сохранить данные в облако");
+            if (!res.ok) throw new Error("Ошибка записи в базу (код " + res.status + ")");
         }
 
         window.syncUserToCloud = async function() {
@@ -804,17 +801,19 @@
             }
         };
 
-
         window.searchCloudUsers = async function() {
             const container = document.getElementById('userSearchResults');
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
-            container.innerHTML = '<div style="text-align:center; color:var(--accent); font-size:0.85rem; padding:14px;">Поиск в базе DOCX...</div>';
+            container.innerHTML = '<div style="text-align:center; color:var(--accent); font-size:0.85rem; padding:14px;">Загрузка списка людей...</div>';
 
             try {
-                await window.syncUserToCloud();
                 const db = await readPantryDb();
                 const users = Object.values(db.users || {});
                 const myPhone = appState.user.phone.toLowerCase().trim();
+
+                if (!db.users || !db.users[myPhone]) {
+                    await window.syncUserToCloud();
+                }
 
                 const filtered = users.filter(u =>
                     u.phone && u.phone.toLowerCase().trim() !== myPhone &&
@@ -825,8 +824,9 @@
                 if (filtered.length === 0) {
                     container.innerHTML = `
                         <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
-                            Пока никого не найдено.<br>
-                            Попросите друга открыть сайт и войти под своим <b>@username</b> или номером телефона!
+                            В базе сейчас пользователей: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
+                            На втором устройстве зайдите под <b>другим @username</b> и нажмите кнопку ниже:<br>
+                            <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
                         </div>`;
                     return;
                 }
@@ -855,7 +855,7 @@
             } catch (e) {
                 container.innerHTML = `
                     <div style="text-align:center; color:#fb7185; font-size:0.85rem; padding:12px;">
-                        Ошибка: ${e.message}<br>
+                        ${e.message}<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Повторить</button>
                     </div>`;
             }
@@ -940,7 +940,7 @@
             };
 
             fetchMessages();
-            chatPollingTimer = setInterval(fetchMessages, 2500);
+            chatPollingTimer = setInterval(fetchMessages, 4000);
         };
 
         window.handleSendImage = async function(event) {
@@ -972,4 +972,3 @@
     </script>
 </body>
 </html>
-
