@@ -417,7 +417,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v8';
+        const STORAGE_KEY = 'docx_messenger_state_v9';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -764,10 +764,10 @@
 
         bootApp();
     </script>
-    <!-- Прямое подключение к Supabase REST API (работает в РФ без VPN) -->
+    <!-- Прямое подключение к Supabase REST API -->
     <script>
         const SUPABASE_URL = "https://supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_xnfNecTRHs8WRt-pCQepyg_2JlGhptb";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWFranNicGtucnB5cXphYnRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NjkwNDAsImV4cCI6MjExMDU0NTA0MH0.5h-NKw1KRGtcPnnFhr6kMwpM2yd9wQBhf7Wn3LeGNhA";
 
         const SB_HEADERS = {
             "apikey": SUPABASE_ANON_KEY,
@@ -903,7 +903,6 @@
                 })
             });
         };
-
         // Получение новых сообщений из Supabase каждые 2 секунды
         window.subscribeToCloudChat = function(targetRoomKey) {
             if (chatPollingTimer) clearInterval(chatPollingTimer);
