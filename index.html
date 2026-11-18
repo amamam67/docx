@@ -400,7 +400,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v15';
+        const STORAGE_KEY = 'docx_messenger_state_v16';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -767,8 +767,7 @@
         function encodeMqttStr(str) {
             const b = textEnc.encode(str);
             const res = new Uint8Array(2 + b.length);
-            res[0] = (b.length >> 8) & 0xff;
-            res[1] = b.length & 0xff;
+            res.set([(b.length >> 8) & 0xff, b.length & 0xff], 0);
             res.set(b, 2);
             return res;
         }
@@ -806,13 +805,14 @@
         function parseIncomingPackets(buf) {
             let i = 0;
             while (i < buf.length) {
-                const type = buf[i] >> 4;
-                const flags = buf[i] & 0x0f;
+                const header = buf.at(i);
+                const type = header >> 4;
+                const flags = header & 0x0f;
                 i++;
                 let mult = 1, remLen = 0, byte;
                 do {
                     if (i >= buf.length) return;
-                    byte = buf[i++];
+                    byte = buf.at(i++);
                     remLen += (byte & 127) * mult;
                     mult *= 128;
                 } while ((byte & 128) !== 0);
@@ -828,7 +828,7 @@
                     wsClient.send(buildSubscribePacket(`${APP_PREFIX}/rooms/#`));
                     window.syncUserToCloud();
                 } else if (type === 3) {
-                    const tLen = (packetBody[0] << 8) | packetBody[1];
+                    const tLen = (packetBody.at(0) << 8) | packetBody.at(1);
                     const topic = textDec.decode(packetBody.slice(2, 2 + tLen));
                     let offset = 2 + tLen;
                     if ((flags & 0x06) > 0) offset += 2;
