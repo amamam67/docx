@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -186,12 +186,16 @@
         .theme-card { padding: 12px; border-radius: 14px; border: 1px solid var(--border); background: rgba(255,255,255,0.03); color: var(--text); cursor: pointer; text-align: center; font-size: 0.85rem; font-weight: 600; transition: 0.2s; }
         .theme-card:hover, .theme-card.active { border-color: var(--accent); background: rgba(255,255,255,0.08); color: var(--accent); }
 
-        /* Модальные окна */
+        /* Модальные окна и поиск пользователей */
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
         .modal-card { background: var(--glass); border: 1px solid var(--border); border-radius: 26px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-header h3 { font-size: 1.2rem; }
         .close-modal { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; }
+
+        .user-search-results { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .found-user-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); cursor: pointer; transition: 0.2s; }
+        .found-user-card:hover { border-color: var(--accent); background: rgba(255,255,255,0.1); }
 
         /* МОБИЛЬНЫЙ ИНТЕРФЕЙС ДЛЯ ТЕЛЕФОНОВ */
         @media (max-width: 768px) {
@@ -214,10 +218,10 @@
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <div class="brand-tag">DOCX</div>
-            <p id="authSubtitle">Войдите в свой аккаунт, чтобы продолжить общение</p>
+            <p id="authSubtitle">Войдите по @username или номеру телефона</p>
             <div id="authBox">
-                <input type="text" class="auth-input" id="regName" placeholder="Ваше имя или никнейм" style="display: none;">
-                <input type="text" class="auth-input" id="authPhone" placeholder="Номер телефона или @username" value="+7 (999) 123-45-67">
+                <input type="text" class="auth-input" id="regName" placeholder="Ваше имя (например: Кирилл)" style="display: none;">
+                <input type="text" class="auth-input" id="authPhone" placeholder="@username или телефон" value="@kirill_chukotka">
                 <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="123456">
                 <button type="button" class="auth-btn" id="authSubmitBtn" onclick="handleLoginSubmit()">Войти в DOCX</button>
             </div>
@@ -233,10 +237,10 @@
             <aside class="sidebar">
                 <div class="sidebar-header">
                     <div class="user-badge" onclick="openSettings()" title="Открыть профиль и настройки">
-                        <div class="avatar" id="myAvatar">АС</div>
+                        <div class="avatar" id="myAvatar">КИ</div>
                         <div class="user-meta">
-                            <div class="user-meta-name" id="myName">Алексей Смирнов</div>
-                            <div class="user-meta-phone" id="myPhone">+7 (999) 123-45-67</div>
+                            <div class="user-meta-name" id="myName">Кирилл</div>
+                            <div class="user-meta-phone" id="myPhone">@kirill_chukotka</div>
                         </div>
                     </div>
                     <div class="docx-badge">DOCX</div>
@@ -244,7 +248,7 @@
 
                 <div class="sidebar-controls">
                     <input type="text" class="search-input" id="searchInput" placeholder="Поиск чатов..." oninput="filterChats()">
-                    <button type="button" class="icon-btn" onclick="openModal('newChatModal')" title="Новый чат">+</button>
+                    <button type="button" class="icon-btn" onclick="openUserSearchModal()" title="Найти человека по @username или телефону">🔍</button>
                     <button type="button" class="icon-btn" onclick="openSettings()" title="Настройки">⚙</button>
                 </div>
 
@@ -256,10 +260,10 @@
                     <div class="chat-header-left">
                         <button type="button" class="icon-btn mobile-back-btn" onclick="closeMobileChat()" title="Назад к чатам">←</button>
                         <div class="chat-header-info" onclick="openModal('profileModal')">
-                            <div class="avatar" id="activeChatAvatar">МК</div>
+                            <div class="avatar" id="activeChatAvatar">🌐</div>
                             <div style="min-width: 0;">
-                                <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="activeChatName">Мария Ковалёва</div>
-                                <div style="font-size: 0.78rem; color: var(--muted);"><span class="status-dot"></span>в сети</div>
+                                <div style="font-weight: 700; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="activeChatName">Общий чат DOCX</div>
+                                <div style="font-size: 0.78rem; color: var(--muted);" id="activeChatSubtitle"><span class="status-dot"></span>@global</div>
                             </div>
                         </div>
                     </div>
@@ -309,7 +313,7 @@
 
                     <!-- Выбор фото или эмодзи для аватарки -->
                     <div class="avatar-setup">
-                        <div class="avatar avatar-preview-lg" id="settingsAvatarPreview">АС</div>
+                        <div class="avatar avatar-preview-lg" id="settingsAvatarPreview">КИ</div>
                         <div class="avatar-actions">
                             <div class="avatar-btn-row">
                                 <label class="small-btn" style="cursor: pointer;">
@@ -335,11 +339,15 @@
                     <div>
                         <div class="form-group">
                             <label class="form-label">Отображаемое имя</label>
-                            <input type="text" class="auth-input" id="editNameInput" value="Алексей Смирнов">
+                            <input type="text" class="auth-input" id="editNameInput" value="Кирилл">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Ваш @username или телефон (по нему вас найдут друзья)</label>
+                            <input type="text" class="auth-input" id="editPhoneInput" value="@kirill_chukotka">
                         </div>
                         <div class="form-group">
                             <label class="form-label">О себе (статус)</label>
-                            <input type="text" class="auth-input" id="editBioInput" value="Разрабатываю мессенджер нового поколения">
+                            <input type="text" class="auth-input" id="editBioInput" value="Создатель мессенджера DOCX">
                         </div>
                         <button type="button" class="auth-btn" onclick="saveProfileChanges()">Сохранить изменения</button>
                     </div>
@@ -375,19 +383,19 @@
         </div>
     </div>
 
-    <!-- Модальное окно: Новый чат -->
+    <!-- Модальное окно: Поиск пользователей по @username или телефону -->
     <div class="modal-backdrop" id="newChatModal">
         <div class="modal-card">
             <div class="modal-header">
-                <h3>Новый диалог</h3>
+                <h3>Найти пользователя</h3>
                 <button type="button" class="close-modal" onclick="closeModal('newChatModal')">✕</button>
             </div>
             <div>
-                <label class="form-label">Имя контакта или название группы</label>
-                <input type="text" class="auth-input" id="newContactName" placeholder="Например: Дмитрий Волков">
-                <label class="form-label">Первое сообщение</label>
-                <input type="text" class="auth-input" id="newContactMsg" placeholder="Привет! Подключайся к DOCX">
-                <button type="button" class="auth-btn" onclick="createNewChat()">Создать чат</button>
+                <label class="form-label">Введите @username, имя или номер телефона</label>
+                <input type="text" class="auth-input" id="userSearchQuery" placeholder="Например: @ivan или +7999..." oninput="searchCloudUsers()">
+                <div id="userSearchResults" class="user-search-results">
+                    <div style="text-align: center; color: var(--muted); font-size: 0.85rem; padding: 14px;">Загрузка списка пользователей...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -399,41 +407,34 @@
                 <h3>Информация о контакте</h3>
                 <button type="button" class="close-modal" onclick="closeModal('profileModal')">✕</button>
             </div>
-            <div class="avatar" id="modalContactAvatar" style="width: 72px; height: 72px; font-size: 1.6rem; margin: 0 auto 14px;">МК</div>
-            <h3 id="modalContactName" style="margin-bottom: 4px;">Мария Ковалёва</h3>
-            <p style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@maria_dev • в сети</p>
+            <div class="avatar" id="modalContactAvatar" style="width: 72px; height: 72px; font-size: 1.6rem; margin: 0 auto 14px;">🌐</div>
+            <h3 id="modalContactName" style="margin-bottom: 4px;">Общий чат DOCX</h3>
+            <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global • в сети</p>
             <div class="settings-section" style="text-align: left; margin-bottom: 0;">
                 <div class="form-label">О пользователе</div>
-                <div style="font-size: 0.9rem;">UI/UX дизайнер. Тестирую новые темы в DOCX.</div>
+                <div id="modalContactBio" style="font-size: 0.9rem;">Главный открытый канал для всех пользователей DOCX</div>
             </div>
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v3';
+        const STORAGE_KEY = 'docx_messenger_state_v5';
         let isRegisterMode = false;
 
         const defaultChats = [
             {
-                id: 1, name: "Мария Ковалёва", initials: "МК", unread: 0,
+                id: 'global_docx_chat',
+                roomId: 'global_docx_chat',
+                name: "Общий чат DOCX",
+                handle: "@global",
+                bio: "Главный открытый канал для всех пользователей DOCX",
+                initials: "🌐",
+                unread: 0,
                 messages: [
-                    { text: "Привет! Как продвигается разработка DOCX?", type: "in", time: "14:20" }
-                ]
-            },
-            {
-                id: 2, name: "Backend Team", initials: "BT", unread: 0,
-                messages: [
-                    { text: "Общий чат команды подключён к Firebase!", type: "in", time: "12:10" }
-                ]
-            },
-            {
-                id: 3, name: "Избранное", initials: "★", unread: 0,
-                messages: [
-                    { text: "Заметка: все сообщения и фото синхронизируются в реальном времени.", type: "out", time: "Вчера" }
+                    { text: "Добро пожаловать! Нажмите 🔍 в меню, чтобы найти друзей по @username или телефону.", type: "in", time: "12:00" }
                 ]
             }
         ];
 
-        // Безопасная загрузка состояния
         let savedData = null;
         try {
             savedData = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -443,12 +444,12 @@
 
         let appState = savedData || {
             isLoggedIn: false,
-            activeChatId: 1,
+            activeChatId: 'global_docx_chat',
             user: {
-                name: 'Алексей Смирнов',
-                phone: '+7 (999) 123-45-67',
-                bio: 'Разрабатываю мессенджер нового поколения',
-                avatar: { type: 'initials', value: 'АС' }
+                name: 'Кирилл',
+                phone: '@kirill_chukotka',
+                bio: 'Создатель мессенджера DOCX',
+                avatar: { type: 'initials', value: 'КИ' }
             },
             theme: '',
             isFlat: false,
@@ -468,21 +469,19 @@
             location.reload();
         }
 
-        // Переключение Вход / Регистрация
         function toggleAuthMode() {
             isRegisterMode = !isRegisterMode;
             document.getElementById('regName').style.display = isRegisterMode ? 'block' : 'none';
             document.getElementById('authSubtitle').textContent = isRegisterMode
-                ? 'Создайте новый профиль в DOCX за секунду'
-                : 'Войдите в свой аккаунт, чтобы продолжить общение';
+                ? 'Создайте профиль — друзья найдут вас по @username или телефону'
+                : 'Войдите по @username или номеру телефона';
             document.getElementById('authSubmitBtn').textContent = isRegisterMode ? 'Создать аккаунт' : 'Войти в DOCX';
             document.getElementById('authSwitchBtn').innerHTML = isRegisterMode
                 ? 'Уже есть аккаунт? <span>Войти</span>'
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
 
-        // Обработка входа
-        function handleLoginSubmit() {
+        async function handleLoginSubmit() {
             const phone = document.getElementById('authPhone').value.trim();
             const regName = document.getElementById('regName').value.trim();
             if (!phone) return;
@@ -494,6 +493,10 @@
             appState.isLoggedIn = true;
             saveState();
             bootApp();
+
+            if (window.syncUserToCloud) {
+                await window.syncUserToCloud();
+            }
         }
 
         function logout() {
@@ -505,7 +508,6 @@
             document.getElementById('authScreen').style.display = 'flex';
         }
 
-        // Прямая отправка текстового сообщения
         async function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -525,13 +527,13 @@
 
             if (window.sendCloudPayload) {
                 try {
-                    await window.sendCloudPayload(activeChat.name, text, null);
+                    const targetRoom = activeChat.roomId || activeChat.name;
+                    await window.sendCloudPayload(targetRoom, text, null);
                 } catch (err) {
                     console.warn('Ошибка синхронизации с облаком:', err);
                 }
             }
         }
-        // Отрисовка аватарки пользователя
         function updateMyAvatarUI() {
             const targets = [
                 document.getElementById('myAvatar'),
@@ -553,7 +555,6 @@
             });
         }
 
-        // Загрузка фото на аватарку
         function handleAvatarUpload(event) {
             const file = event.target.files.item(0);
             if (!file) return;
@@ -562,6 +563,7 @@
                 appState.user.avatar = { type: 'image', value: e.target.result };
                 updateMyAvatarUI();
                 saveState();
+                if (window.syncUserToCloud) window.syncUserToCloud();
             };
             reader.readAsDataURL(file);
         }
@@ -570,6 +572,7 @@
             appState.user.avatar = { type: 'emoji', value: emoji };
             updateMyAvatarUI();
             saveState();
+            if (window.syncUserToCloud) window.syncUserToCloud();
         }
 
         function resetAvatarToInitials() {
@@ -577,9 +580,9 @@
             appState.user.avatar = { type: 'initials', value: currentName.slice(0, 2).toUpperCase() };
             updateMyAvatarUI();
             saveState();
+            if (window.syncUserToCloud) window.syncUserToCloud();
         }
 
-        // Настройки, темы и макет
         function openSettings() {
             document.getElementById('chatWorkspace').style.display = 'none';
             document.getElementById('settingsWorkspace').style.display = 'block';
@@ -606,9 +609,9 @@
             saveState();
         }
 
-        // Сохранение профиля
-        function saveProfileChanges() {
+        async function saveProfileChanges() {
             const newName = document.getElementById('editNameInput').value.trim();
+            const newPhone = document.getElementById('editPhoneInput').value.trim();
             const newBio = document.getElementById('editBioInput').value.trim();
             if (newName) {
                 appState.user.name = newName;
@@ -618,12 +621,18 @@
                 }
                 updateMyAvatarUI();
             }
+            if (newPhone) {
+                appState.user.phone = newPhone;
+                document.getElementById('myPhone').textContent = newPhone;
+            }
             appState.user.bio = newBio;
             saveState();
             closeSettings();
-        }
 
-        // Отрисовка списка чатов
+            if (window.syncUserToCloud) {
+                await window.syncUserToCloud();
+            }
+        }
         function renderChatList(filter = '') {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -659,8 +668,11 @@
             chat.unread = 0;
             document.getElementById('activeChatName').textContent = chat.name;
             document.getElementById('activeChatAvatar').textContent = chat.initials;
+            document.getElementById('activeChatSubtitle').innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
             document.getElementById('modalContactName').textContent = chat.name;
             document.getElementById('modalContactAvatar').textContent = chat.initials;
+            document.getElementById('modalContactHandle').textContent = `${chat.handle || '@user'} • в сети`;
+            document.getElementById('modalContactBio').textContent = chat.bio || 'Пользователь мессенджера DOCX';
 
             if (openOnMobile) {
                 document.body.classList.add('mobile-chat-open');
@@ -670,7 +682,7 @@
             renderChatList();
             renderMessages();
             if (window.subscribeToCloudChat) {
-                window.subscribeToCloudChat(chat.name);
+                window.subscribeToCloudChat(chat.roomId || chat.name);
             }
         }
 
@@ -706,36 +718,33 @@
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-        // Создание нового диалога
-        async function createNewChat() {
-            const nameInput = document.getElementById('newContactName');
-            const msgInput = document.getElementById('newContactMsg');
-            const name = nameInput.value.trim();
-            const msg = msgInput.value.trim();
-            if (!name) return;
+        function openUserSearchModal() {
+            openModal('newChatModal');
+            document.getElementById('userSearchQuery').value = '';
+            if (window.searchCloudUsers) window.searchCloudUsers();
+        }
 
-            const newId = Date.now();
-            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        function startDirectChat(targetUser) {
+            const myId = appState.user.phone.toLowerCase().trim();
+            const theirId = targetUser.phone.toLowerCase().trim();
+            const pairKey = [myId, theirId].sort().join('__');
 
-            appState.chats.unshift({
-                id: newId,
-                name,
-                initials: name.slice(0, 2).toUpperCase(),
-                unread: 0,
-                messages: msg ? [{ text: msg, type: 'out', time: now }] : []
-            });
-            closeModal('newChatModal');
-            nameInput.value = '';
-            msgInput.value = '';
-            selectChat(newId, true);
-
-            if (msg && window.sendCloudPayload) {
-                try {
-                    await window.sendCloudPayload(name, msg, null);
-                } catch (err) {
-                    console.warn('Ошибка создания облачного чата:', err);
-                }
+            let chat = appState.chats.find(c => c.roomId === pairKey);
+            if (!chat) {
+                chat = {
+                    id: pairKey,
+                    roomId: pairKey,
+                    name: targetUser.name,
+                    handle: targetUser.phone,
+                    bio: targetUser.bio || 'Пользователь мессенджера DOCX',
+                    initials: targetUser.avatarEmoji || targetUser.name.slice(0, 2).toUpperCase(),
+                    unread: 0,
+                    messages: []
+                };
+                appState.chats.unshift(chat);
             }
+            closeModal('newChatModal');
+            selectChat(chat.id, true);
         }
 
         function bootApp() {
@@ -743,6 +752,7 @@
             document.getElementById('myName').textContent = appState.user.name;
             document.getElementById('myPhone').textContent = appState.user.phone;
             document.getElementById('editNameInput').value = appState.user.name;
+            document.getElementById('editPhoneInput').value = appState.user.phone;
             document.getElementById('editBioInput').value = appState.user.bio;
             updateMyAvatarUI();
 
@@ -758,7 +768,7 @@
     <!-- Облачная синхронизация Firebase Firestore -->
     <script type="module">
         import { initializeApp } from "https://gstatic.com";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://gstatic.com";
+        import { getFirestore, collection, doc, setDoc, getDocs, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://gstatic.com";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAZWgBuCzo-_g94ajwHLFjyA0jqyxirT7Q",
@@ -773,7 +783,71 @@
         const db = getFirestore(firebaseApp);
         let unsubscribeCurrentChat = null;
 
-        // Сжатие фото перед отправкой в Firestore (макс. ширина 800px)
+        // Регистрация / обновление профиля пользователя в облаке для поиска
+        window.syncUserToCloud = async function() {
+            if (!appState.isLoggedIn || !appState.user.phone) return;
+            const userDocId = encodeURIComponent(appState.user.phone.toLowerCase().trim());
+            try {
+                await setDoc(doc(db, "docx_users", userDocId), {
+                    name: appState.user.name,
+                    phone: appState.user.phone,
+                    bio: appState.user.bio || '',
+                    avatarEmoji: appState.user.avatar.type === 'emoji' ? appState.user.avatar.value : '',
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+            } catch (e) {
+                console.warn("Не удалось сохранить профиль в docx_users:", e);
+            }
+        };
+
+        // Поиск пользователей по @username, телефону или имени
+        window.searchCloudUsers = async function() {
+            const container = document.getElementById('userSearchResults');
+            const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
+            container.innerHTML = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:12px;">Поиск в базе DOCX...</div>';
+
+            try {
+                const snap = await getDocs(collection(db, "docx_users"));
+                const users = [];
+                snap.forEach(d => {
+                    const u = d.data();
+                    if (u.phone && u.phone.toLowerCase().trim() !== appState.user.phone.toLowerCase().trim()) {
+                        users.push(u);
+                    }
+                });
+
+                const filtered = users.filter(u =>
+                    (u.name && u.name.toLowerCase().includes(qText)) ||
+                    (u.phone && u.phone.toLowerCase().includes(qText))
+                );
+
+                if (filtered.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px;">Пользователи не найдены. Попросите друга зайти в DOCX под своим @username или телефоном!</div>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                filtered.forEach(u => {
+                    const card = document.createElement('div');
+                    card.className = 'found-user-card';
+                    card.onclick = () => startDirectChat(u);
+                    const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
+                    card.innerHTML = `
+                        <div class="avatar">${badge}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:700; font-size:0.95rem;">${u.name}</div>
+                            <div style="font-size:0.8rem; color:var(--accent);">${u.phone}</div>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--muted);">Написать →</div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (e) {
+                container.innerHTML = '<div style="text-align:center; color:#fb7185; font-size:0.85rem; padding:12px;">Ошибка доступа. Проверьте правила docx_users в Firebase Rules!</div>';
+            }
+        };
+
+        // Сжатие фото перед отправкой в Firestore
         function compressImage(file, maxWidth = 800, quality = 0.75) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -794,8 +868,8 @@
         }
 
         // Отправка текста или фото в облачную комнату
-        window.sendCloudPayload = async function(chatRoomName, text, imageBase64) {
-            const roomId = encodeURIComponent(chatRoomName.toLowerCase().trim());
+        window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
+            const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
             await addDoc(collection(db, "docx_chats", roomId, "messages"), {
                 senderName: appState.user.name,
                 senderPhone: appState.user.phone,
@@ -806,15 +880,15 @@
         };
 
         // Подписка на сообщения выбранного чата в реальном времени
-        window.subscribeToCloudChat = function(chatRoomName) {
+        window.subscribeToCloudChat = function(targetRoomKey) {
             if (unsubscribeCurrentChat) unsubscribeCurrentChat();
-            const roomId = encodeURIComponent(chatRoomName.toLowerCase().trim());
+            const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
             const q = query(collection(db, "docx_chats", roomId, "messages"), orderBy("createdAt", "asc"));
 
             unsubscribeCurrentChat = onSnapshot(q, (snapshot) => {
                 const cloudMessages = [];
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
+                snapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
                     const isMe = data.senderPhone === appState.user.phone;
                     const dateObj = data.createdAt ? data.createdAt.toDate() : new Date();
                     const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -827,7 +901,7 @@
                     });
                 });
 
-                const chat = appState.chats.find(c => c.name === chatRoomName);
+                const chat = appState.chats.find(c => (c.roomId || c.name) === targetRoomKey);
                 if (chat && cloudMessages.length > 0) {
                     chat.messages = cloudMessages;
                     saveState();
@@ -855,13 +929,15 @@
             renderMessages();
             renderChatList();
 
-            await window.sendCloudPayload(activeChat.name, '', compressedBase64);
+            const targetRoom = activeChat.roomId || activeChat.name;
+            await window.sendCloudPayload(targetRoom, '', compressedBase64);
         };
 
         if (appState.isLoggedIn) {
+            window.syncUserToCloud();
             const currentChat = appState.chats.find(c => c.id === appState.activeChatId);
             if (currentChat) {
-                window.subscribeToCloudChat(currentChat.name);
+                window.subscribeToCloudChat(currentChat.roomId || currentChat.name);
             }
         }
     </script>
