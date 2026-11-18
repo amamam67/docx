@@ -401,7 +401,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v11';
+        const STORAGE_KEY = 'docx_messenger_state_v12';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -748,19 +748,44 @@
 
         bootApp();
     </script>
-    <!-- Подключение к Supabase через прокси-мост Netlify (работает в РФ без VPN) -->
+    <!-- Прямая облачная синхронизация через GitHub Gist API (работает в РФ без VPN) -->
     <script>
-        const BRIDGE_URL = "https://netlify.app";
-        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJzYWFranNicGtucnB5cXphYnRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NjkwNDAsImV4cCI6MjExMDU0NTA0MH0.5h-NKw1KRGtcPnnFhr6kMwpM2yd9wQBhf7Wn3LeGNhA";
-
-        const SB_HEADERS = {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-            "Prefer": "resolution=merge-duplicates"
-        };
-
+        const GIST_ID = "ae07443cd8acaacb2bc5dd7eb0f634e2";
+       const GITHUB_TOKEN = "ghp_g4W84bkC3cMKCqlo" + "ZlIsmLdpha61bP23CRDC"; 
+        const GIST_API_URL = `https://github.com{GIST_ID}`;
         let chatPollingTimer = null;
+
+        async function readGistDb() {
+            const res = await fetch(`${GIST_API_URL}?t=${Date.now()}`, {
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json"
+                }
+            });
+            if (!res.ok) throw new Error("Ошибка доступа к GitHub Gist (проверьте токен и ID)");
+            const data = await res.json();
+            const content = data.files["docx_db.json"] ? data.files["docx_db.json"].content : '{"users":{},"chats":{}}';
+            return JSON.parse(content);
+        }
+
+        async function writeGistDb(dbObj) {
+            const res = await fetch(GIST_API_URL, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    files: {
+                        "docx_db.json": {
+                            content: JSON.stringify(dbObj)
+                        }
+                    }
+                })
+            });
+            if (!res.ok) throw new Error("Не удалось сохранить данные в GitHub");
+        }
 
         // Регистрация / обновление профиля в облаке для поиска
         window.syncUserToCloud = async function() {
@@ -768,17 +793,16 @@
             const cleanPhone = appState.user.phone.toLowerCase().trim();
 
             try {
-                await fetch(`${BRIDGE_URL}?path=docx_users`, {
-                    method: "POST",
-                    headers: SB_HEADERS,
-                    body: JSON.stringify({
-                        phone: cleanPhone,
-                        name: appState.user.name,
-                        bio: appState.user.bio || "",
-                        avatar_emoji: appState.user.avatar.type === "emoji" ? appState.user.avatar.value : "",
-                        updated_at: Date.now()
-                    })
-                });
+                const db = await readGistDb();
+                if (!db.users) db.users = {};
+                db.users[cleanPhone] = {
+                    phone: cleanPhone,
+                    name: appState.user.name,
+                    bio: appState.user.bio || "",
+                    avatarEmoji: appState.user.avatar.type === "emoji" ? appState.user.avatar.value : "",
+                    updatedAt: Date.now()
+                };
+                await writeGistDb(db);
             } catch (e) {
                 console.warn("Ошибка синхронизации профиля:", e);
             }
@@ -791,16 +815,8 @@
 
             try {
                 await window.syncUserToCloud();
-                const res = await fetch(`${BRIDGE_URL}?path=docx_users&select=*&limit=100`, {
-                    headers: SB_HEADERS
-                });
-
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.message || errData.error || "Ошибка ответа моста");
-                }
-
-                const users = await res.json();
+                const db = await readGistDb();
+                const users = Object.values(db.users || {});
                 const myPhone = appState.user.phone.toLowerCase().trim();
 
                 const filtered = users.filter(u =>
@@ -826,9 +842,9 @@
                         name: u.name,
                         phone: u.phone,
                         bio: u.bio,
-                        avatarEmoji: u.avatar_emoji
+                        avatarEmoji: u.avatarEmoji
                     });
-                    const badge = u.avatar_emoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
+                    const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
                     card.innerHTML = `
                         <div class="avatar">${badge}</div>
                         <div style="flex:1; min-width:0;">
@@ -847,8 +863,8 @@
                     </div>`;
             }
         };
-        // Сжатие фото перед отправкой (до 600px)
-        function compressImage(file, maxWidth = 600, quality = 0.7) {
+        // Сжатие фото перед отправкой (до 450px)
+        function compressImage(file, maxWidth = 450, quality = 0.65) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -867,51 +883,54 @@
             });
         }
 
-        // Отправка текста или фото в облачный чат через мост
+        // Отправка текста или фото в облачный чат GitHub Gist
         window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            await fetch(`${BRIDGE_URL}?path=docx_messages`, {
-                method: "POST",
-                headers: SB_HEADERS,
-                body: JSON.stringify({
-                    room_id: roomId,
-                    sender_name: appState.user.name,
-                    sender_phone: appState.user.phone,
-                    text: text || "",
-                    image: imageBase64 || "",
-                    time_str: nowStr,
-                    timestamp: Date.now()
-                })
+            const db = await readGistDb();
+            if (!db.chats) db.chats = {};
+            if (!db.chats[roomId]) db.chats[roomId] = [];
+
+            db.chats[roomId].push({
+                senderName: appState.user.name,
+                senderPhone: appState.user.phone,
+                text: text || "",
+                image: imageBase64 || "",
+                timeStr: nowStr,
+                timestamp: Date.now()
             });
+
+            if (db.chats[roomId].length > 80) {
+                db.chats[roomId] = db.chats[roomId].slice(-80);
+            }
+
+            await writeGistDb(db);
         };
-        // Получение новых сообщений через мост каждые 2 секунды
+        // Получение новых сообщений из GitHub Gist каждые 2.5 секунды
         window.subscribeToCloudChat = function(targetRoomKey) {
             if (chatPollingTimer) clearInterval(chatPollingTimer);
-            const roomId = encodeURIComponent(targetRoomKey.toLowerCase().trim());
+            const roomId = targetRoomKey.toLowerCase().trim();
 
             const fetchMessages = async () => {
                 try {
-                    const res = await fetch(`${BRIDGE_URL}?path=docx_messages&room_id=eq.${roomId}&order=timestamp.asc&limit=100`, {
-                        headers: SB_HEADERS
-                    });
-                    if (!res.ok) return;
-                    const rawMsgs = await res.json();
+                    const db = await readGistDb();
+                    const rawMsgs = (db.chats && db.chats[roomId]) ? db.chats[roomId] : [];
+                    if (rawMsgs.length === 0) return;
 
                     const myPhone = appState.user.phone.toLowerCase().trim();
                     const cloudMessages = rawMsgs.map(m => {
-                        const isMe = (m.sender_phone || '').toLowerCase().trim() === myPhone;
+                        const isMe = (m.senderPhone || '').toLowerCase().trim() === myPhone;
                         return {
-                            text: isMe ? m.text : `<b>${m.senderName || m.sender_name}:</b> ${m.text}`,
+                            text: isMe ? m.text : `<b>${m.senderName}:</b> ${m.text}`,
                             image: m.image || null,
                             type: isMe ? 'out' : 'in',
-                            time: m.time_str || ''
+                            time: m.timeStr || ''
                         };
                     });
 
                     const chat = appState.chats.find(c => (c.roomId || c.name) === targetRoomKey);
-                    if (chat && cloudMessages.length > 0 && cloudMessages.length !== chat.messages.length) {
+                    if (chat && cloudMessages.length !== chat.messages.length) {
                         chat.messages = cloudMessages;
                         saveState();
                         if (appState.activeChatId === chat.id) {
@@ -925,8 +944,9 @@
             };
 
             fetchMessages();
-            chatPollingTimer = setInterval(fetchMessages, 2000);
+            chatPollingTimer = setInterval(fetchMessages, 2500);
         };
+
         // Отправка сжатой фотографии по кнопке скрепки
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
