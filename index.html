@@ -72,6 +72,7 @@
             --msg-in: rgba(255, 255, 255, 0.09); --text: #fffbeb; --muted: #fde047;
             --border: rgba(250, 204, 21, 0.3);
         }
+
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
         body {
             background-color: var(--bg-dark);
@@ -89,7 +90,6 @@
         .auth-btn:hover { transform: translateY(-2px); opacity: 0.92; }
         .auth-switch { margin-top: 18px; font-size: 0.85rem; color: var(--muted); cursor: pointer; }
         .auth-switch span { color: var(--accent); font-weight: 700; }
-
         .app { display: none; flex-direction: column; height: 100vh; height: 100dvh; width: 100vw; }
         .main-workspace { flex: 1; display: flex; padding: 16px; gap: 16px; min-height: 0; transition: 0.3s; }
         .sidebar { width: 340px; background: var(--glass); backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
@@ -352,7 +352,6 @@
                         <div class="theme-card" data-theme="theme-newyear" onclick="setTheme('theme-newyear')">New Year</div>
                     </div>
                 </div>
-
                 <div class="settings-section">
                     <h3>Режим интерфейса</h3>
                     <div style="display: flex; gap: 10px;">
@@ -401,7 +400,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v12';
+        const STORAGE_KEY = 'docx_messenger_state_v14';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -465,7 +464,7 @@
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
 
-        async function handleLoginSubmit() {
+        function handleLoginSubmit() {
             const phone = document.getElementById('authPhone').value.trim();
             const regName = document.getElementById('regName').value.trim();
             if (!phone) return;
@@ -479,7 +478,7 @@
             bootApp();
 
             if (window.syncUserToCloud) {
-                await window.syncUserToCloud();
+                window.syncUserToCloud();
             }
         }
 
@@ -491,8 +490,7 @@
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('authScreen').style.display = 'flex';
         }
-
-        async function sendTextMessage() {
+        function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text) return;
@@ -510,14 +508,11 @@
             renderChatList();
 
             if (window.sendCloudPayload) {
-                try {
-                    const targetRoom = activeChat.roomId || activeChat.name;
-                    await window.sendCloudPayload(targetRoom, text, null);
-                } catch (err) {
-                    console.warn('Ошибка синхронизации с облаком:', err);
-                }
+                const targetRoom = activeChat.roomId || activeChat.name;
+                window.sendCloudPayload(targetRoom, text, null);
             }
         }
+
         function updateMyAvatarUI() {
             const targets = [
                 document.getElementById('myAvatar'),
@@ -566,7 +561,6 @@
             saveState();
             if (window.syncUserToCloud) window.syncUserToCloud();
         }
-
         function openSettings() {
             document.getElementById('chatWorkspace').style.display = 'none';
             document.getElementById('settingsWorkspace').style.display = 'block';
@@ -593,7 +587,7 @@
             saveState();
         }
 
-        async function saveProfileChanges() {
+        function saveProfileChanges() {
             const newName = document.getElementById('editNameInput').value.trim();
             const newPhone = document.getElementById('editPhoneInput').value.trim();
             const newBio = document.getElementById('editBioInput').value.trim();
@@ -614,7 +608,7 @@
             closeSettings();
 
             if (window.syncUserToCloud) {
-                await window.syncUserToCloud();
+                window.syncUserToCloud();
             }
         }
         function renderChatList(filter = '') {
@@ -748,119 +742,187 @@
 
         bootApp();
     </script>
-            <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
-           <!-- Облачная синхронизация через Pantry Cloud -->
+    <!-- Мгновенная доставка сообщений и поиск через WebSocket MQTT (работает в РФ без VPN и ключей) -->
+    <script src="https://unpkg.com"></script>
     <script>
-        const P_HOST = "https://getpantry.cloud";
-        const P_PATH = "/apiv1/pantry/";
-        const P_ID = "16e1cb5f-000e-4748-a931-1c9b122b4302";
-        const P_BASKET = "/basket/docx_data";
-        const PANTRY_URL = P_HOST + P_PATH + P_ID + P_BASKET;
+        const BROKER_URL = "wss://broker.emqx.io:8084/mqtt";
+        const APP_PREFIX = "docx_messenger_ru_2026_v1";
+        let mqttClient = null;
+        let onlineUsersMap = {};
+        let currentRoomTopic = null;
 
-        let chatPollingTimer = null;
-
-        async function readPantryDb() {
-            const res = await fetch(PANTRY_URL + "?t=" + Date.now(), { cache: "no-store" });
-            if (res.status === 429) throw new Error("Слишком частые запросы, подождите 5 секунд");
-            const rawText = await res.text();
-            try {
-                const parsed = JSON.parse(rawText);
-                if (parsed && typeof parsed === "object" && !parsed.error) {
-                    return parsed;
-                }
-            } catch (e) {}
-            return { users: {}, chats: {} };
-        }
-
-        async function writePantryDb(dbObj) {
-            const res = await fetch(PANTRY_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(dbObj)
+        function initMqtt() {
+            const clientId = "docx_" + Math.random().toString(16).slice(2, 10);
+            mqttClient = mqtt.connect(BROKER_URL, {
+                clientId: clientId,
+                clean: true,
+                reconnectPeriod: 3000
             });
-            if (!res.ok) throw new Error("Ошибка записи в базу (код " + res.status + ")");
+
+            mqttClient.on("connect", () => {
+                console.log("Подключено к облаку DOCX (EMQX WebSocket)");
+                mqttClient.subscribe(`${APP_PREFIX}/presence/#`);
+                const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+                if (activeChat) {
+                    window.subscribeToCloudChat(activeChat.roomId || activeChat.name);
+                }
+                window.syncUserToCloud();
+            });
+
+            mqttClient.on("message", (topic, payload) => {
+                try {
+                    const data = JSON.parse(payload.toString());
+
+                    if (topic.startsWith(`${APP_PREFIX}/presence/`)) {
+                        if (data && data.phone) {
+                            onlineUsersMap[data.phone.toLowerCase().trim()] = data;
+                        }
+                        return;
+                    }
+
+                    if (topic.startsWith(`${APP_PREFIX}/rooms/`)) {
+                        const roomId = topic.replace(`${APP_PREFIX}/rooms/`, "");
+                        const myPhone = appState.user.phone.toLowerCase().trim();
+                        const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
+
+                        if (isMe) return;
+
+                        let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+                        if (!chat && roomId.includes("__")) {
+                            const participants = roomId.split("__");
+                            if (!participants.includes(myPhone)) return;
+
+                            chat = {
+                                id: roomId,
+                                roomId: roomId,
+                                name: data.senderName || data.senderPhone,
+                                handle: data.senderPhone,
+                                bio: "Пользователь мессенджера DOCX",
+                                initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
+                                unread: 0,
+                                messages: []
+                            };
+                            appState.chats.unshift(chat);
+                        }
+
+                        if (chat) {
+                            if (chat.messages.some(m => m.msgId === data.msgId)) return;
+
+                            chat.messages.push({
+                                msgId: data.msgId,
+                                text: `<b>${data.senderName}:</b> ${data.text || ""}`,
+                                image: data.image || null,
+                                type: "in",
+                                time: data.timeStr || ""
+                            });
+
+                            if (appState.activeChatId !== chat.id) {
+                                chat.unread = (chat.unread || 0) + 1;
+                            }
+
+                            saveState();
+                            if (appState.activeChatId === chat.id) {
+                                renderMessages();
+                            }
+                            renderChatList();
+                        }
+                    }
+                } catch (e) {
+                    console.warn("Ошибка разбора пакета:", e);
+                }
+            });
         }
-
-        window.syncUserToCloud = async function() {
-            if (!appState.isLoggedIn || !appState.user.phone) return;
+        window.syncUserToCloud = function() {
+            if (!appState.isLoggedIn || !appState.user.phone || !mqttClient || !mqttClient.connected) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
+            const safeKey = encodeURIComponent(cleanPhone);
 
-            try {
-                const db = await readPantryDb();
-                if (!db.users) db.users = {};
-                db.users[cleanPhone] = {
-                    phone: cleanPhone,
-                    name: appState.user.name,
-                    bio: appState.user.bio || "",
-                    avatarEmoji: appState.user.avatar.type === "emoji" ? appState.user.avatar.value : "",
-                    updatedAt: Date.now()
-                };
-                await writePantryDb(db);
-            } catch (e) {
-                console.warn("Ошибка синхронизации профиля:", e);
-            }
+            const profileData = {
+                phone: cleanPhone,
+                name: appState.user.name,
+                bio: appState.user.bio || "",
+                avatarEmoji: appState.user.avatar.type === "emoji" ? appState.user.avatar.value : "",
+                updatedAt: Date.now()
+            };
+
+            onlineUsersMap[cleanPhone] = profileData;
+            mqttClient.publish(`${APP_PREFIX}/presence/${safeKey}`, JSON.stringify(profileData), { retain: true, qos: 1 });
         };
 
-        window.searchCloudUsers = async function() {
+        window.searchCloudUsers = function() {
             const container = document.getElementById('userSearchResults');
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
-            container.innerHTML = '<div style="text-align:center; color:var(--accent); font-size:0.85rem; padding:14px;">Загрузка списка людей...</div>';
 
-            try {
-                const db = await readPantryDb();
-                const users = Object.values(db.users || {});
-                const myPhone = appState.user.phone.toLowerCase().trim();
+            window.syncUserToCloud();
+            const users = Object.values(onlineUsersMap);
+            const myPhone = appState.user.phone.toLowerCase().trim();
 
-                if (!db.users || !db.users[myPhone]) {
-                    await window.syncUserToCloud();
-                }
+            const filtered = users.filter(u =>
+                u.phone && u.phone.toLowerCase().trim() !== myPhone &&
+                ((u.name && u.name.toLowerCase().includes(qText)) ||
+                 (u.phone && u.phone.toLowerCase().includes(qText)))
+            );
 
-                const filtered = users.filter(u =>
-                    u.phone && u.phone.toLowerCase().trim() !== myPhone &&
-                    ((u.name && u.name.toLowerCase().includes(qText)) ||
-                     (u.phone && u.phone.toLowerCase().includes(qText)))
-                );
-
-                if (filtered.length === 0) {
-                    container.innerHTML = `
-                        <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
-                            В базе сейчас пользователей: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
-                            На втором устройстве зайдите под <b>другим @username</b> и нажмите кнопку ниже:<br>
-                            <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
-                        </div>`;
-                    return;
-                }
-
-                container.innerHTML = '';
-                filtered.forEach(u => {
-                    const card = document.createElement('div');
-                    card.className = 'found-user-card';
-                    card.onclick = () => startDirectChat({
-                        name: u.name,
-                        phone: u.phone,
-                        bio: u.bio,
-                        avatarEmoji: u.avatarEmoji
-                    });
-                    const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
-                    card.innerHTML = `
-                        <div class="avatar">${badge}</div>
-                        <div style="flex:1; min-width:0;">
-                            <div style="font-weight:700; font-size:0.95rem;">${u.name}</div>
-                            <div style="font-size:0.8rem; color:var(--accent);">${u.phone}</div>
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--muted);">Написать →</div>
-                    `;
-                    container.appendChild(card);
-                });
-            } catch (e) {
+            if (filtered.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align:center; color:#fb7185; font-size:0.85rem; padding:12px;">
-                        ${e.message}<br>
-                        <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Повторить</button>
+                    <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
+                        В сети зарегистрировано профилей: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
+                        Откройте сайт на втором устройстве под <b>другим @username</b> и нажмите кнопку ниже:<br>
+                        <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
                     </div>`;
+                return;
             }
+
+            container.innerHTML = '';
+            filtered.forEach(u => {
+                const card = document.createElement('div');
+                card.className = 'found-user-card';
+                card.onclick = () => startDirectChat({
+                    name: u.name,
+                    phone: u.phone,
+                    bio: u.bio,
+                    avatarEmoji: u.avatarEmoji
+                });
+                const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
+                card.innerHTML = `
+                    <div class="avatar">${badge}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:700; font-size:0.95rem;">${u.name}</div>
+                        <div style="font-size:0.8rem; color:var(--accent);">${u.phone}</div>
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--muted);">Написать →</div>
+                `;
+                container.appendChild(card);
+            });
+        };
+        window.subscribeToCloudChat = function(targetRoomKey) {
+            if (!mqttClient || !mqttClient.connected) return;
+            const roomId = targetRoomKey.toLowerCase().trim();
+            currentRoomTopic = `${APP_PREFIX}/rooms/${roomId}`;
+            mqttClient.subscribe(currentRoomTopic);
+            mqttClient.subscribe(`${APP_PREFIX}/rooms/#`);
         };
 
+        window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
+            if (!mqttClient || !mqttClient.connected) {
+                alert("Нет соединения с облаком. Подождите 2 секунды и повторите.");
+                return;
+            }
+            const roomId = targetRoomKey.toLowerCase().trim();
+            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const payload = {
+                msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
+                senderName: appState.user.name,
+                senderPhone: appState.user.phone,
+                text: text || "",
+                image: imageBase64 || "",
+                timeStr: nowStr,
+                timestamp: Date.now()
+            };
+
+            mqttClient.publish(`${APP_PREFIX}/rooms/${roomId}`, JSON.stringify(payload), { qos: 1 });
+        };
         function compressImage(file, maxWidth = 450, quality = 0.65) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -880,69 +942,6 @@
             });
         }
 
-        window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
-            const roomId = targetRoomKey.toLowerCase().trim();
-            const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const db = await readPantryDb();
-            if (!db.chats) db.chats = {};
-            if (!db.chats[roomId]) db.chats[roomId] = [];
-
-            db.chats[roomId].push({
-                senderName: appState.user.name,
-                senderPhone: appState.user.phone,
-                text: text || "",
-                image: imageBase64 || "",
-                timeStr: nowStr,
-                timestamp: Date.now()
-            });
-
-            if (db.chats[roomId].length > 60) {
-                db.chats[roomId] = db.chats[roomId].slice(-60);
-            }
-
-            await writePantryDb(db);
-        };
-
-        window.subscribeToCloudChat = function(targetRoomKey) {
-            if (chatPollingTimer) clearInterval(chatPollingTimer);
-            const roomId = targetRoomKey.toLowerCase().trim();
-
-            const fetchMessages = async () => {
-                try {
-                    const db = await readPantryDb();
-                    const rawMsgs = (db.chats && db.chats[roomId]) ? db.chats[roomId] : [];
-                    if (rawMsgs.length === 0) return;
-
-                    const myPhone = appState.user.phone.toLowerCase().trim();
-                    const cloudMessages = rawMsgs.map(m => {
-                        const isMe = (m.senderPhone || '').toLowerCase().trim() === myPhone;
-                        return {
-                            text: isMe ? m.text : `<b>${m.senderName}:</b> ${m.text}`,
-                            image: m.image || null,
-                            type: isMe ? 'out' : 'in',
-                            time: m.timeStr || ''
-                        };
-                    });
-
-                    const chat = appState.chats.find(c => (c.roomId || c.name) === targetRoomKey);
-                    if (chat && cloudMessages.length !== chat.messages.length) {
-                        chat.messages = cloudMessages;
-                        saveState();
-                        if (appState.activeChatId === chat.id) {
-                            renderMessages();
-                        }
-                        renderChatList();
-                    }
-                } catch (e) {
-                    console.warn("Ошибка проверки сообщений:", e);
-                }
-            };
-
-            fetchMessages();
-            chatPollingTimer = setInterval(fetchMessages, 4000);
-        };
-
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
             if (!file) return;
@@ -959,16 +958,13 @@
             renderChatList();
 
             const targetRoom = activeChat.roomId || activeChat.name;
-            await window.sendCloudPayload(targetRoom, '', compressedBase64);
+            window.sendCloudPayload(targetRoom, '', compressedBase64);
         };
 
-        if (appState.isLoggedIn) {
-            window.syncUserToCloud();
-            const currentChat = appState.chats.find(c => c.id === appState.activeChatId);
-            if (currentChat) {
-                window.subscribeToCloudChat(currentChat.roomId || currentChat.name);
-            }
-        }
+        initMqtt();
+        setInterval(() => {
+            if (appState.isLoggedIn) window.syncUserToCloud();
+        }, 15000);
     </script>
 </body>
 </html>
