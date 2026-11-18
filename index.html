@@ -1,4 +1,4 @@
-.<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -417,7 +417,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v7';
+        const STORAGE_KEY = 'docx_messenger_state_v8';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -766,8 +766,7 @@
     </script>
     <!-- Прямое подключение к Supabase REST API (работает в РФ без VPN) -->
     <script>
-        // ВСТАВЬТЕ СЮДА ВАШ PROJECT URL ИЗ SUPABASE (Project Settings -> Data API)
-        const SUPABASE_URL = "https://ВАШ_ПРОЕКТ.supabase.co";
+        const SUPABASE_URL = "https://supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_xnfNecTRHs8WRt-pCQepyg_2JlGhptb";
 
         const SB_HEADERS = {
@@ -922,7 +921,7 @@
                     const cloudMessages = rawMsgs.map(m => {
                         const isMe = (m.sender_phone || '').toLowerCase().trim() === myPhone;
                         return {
-                            text: isMe ? m.text : `<b>${m.sender_name}:</b> ${m.text}`,
+                            text: isMe ? m.text : `<b>${m.senderName || m.sender_name}:</b> ${m.text}`,
                             image: m.image || null,
                             type: isMe ? 'out' : 'in',
                             time: m.time_str || ''
