@@ -749,13 +749,15 @@
         bootApp();
     </script>
             <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
-     <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
+         <!-- Облачная синхронизация через Pantry Cloud (без кэширования) -->
     <script>
         const PANTRY_URL = "https://getpantry.cloud";
         let chatPollingTimer = null;
 
         async function readPantryDb() {
-            const res = await fetch(PANTRY_URL);
+            const res = await fetch(`${PANTRY_URL}?t=${Date.now()}`, {
+                cache: "no-store"
+            });
             const rawText = await res.text();
             try {
                 const parsed = JSON.parse(rawText);
@@ -767,11 +769,18 @@
         }
 
         async function writePantryDb(dbObj) {
-            const res = await fetch(PANTRY_URL, {
-                method: "POST",
+            let res = await fetch(PANTRY_URL, {
+                method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(dbObj)
             });
+            if (!res.ok) {
+                res = await fetch(PANTRY_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(dbObj)
+                });
+            }
             if (!res.ok) throw new Error("Не удалось сохранить данные в облако");
         }
 
@@ -794,6 +803,7 @@
                 console.warn("Ошибка синхронизации профиля:", e);
             }
         };
+
 
         window.searchCloudUsers = async function() {
             const container = document.getElementById('userSearchResults');
