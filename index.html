@@ -748,19 +748,22 @@
 
         bootApp();
     </script>
-         <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
+            <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
+     <!-- Облачная синхронизация через Pantry Cloud (работает в РФ без VPN) -->
     <script>
-        const PANTRY_ID = "16e1cb5f-000e-4748-a931-1c9b122b4302";
-        const PANTRY_URL = "https://getpantry.cloud" + PANTRY_ID + "/basket/docx_data";
+        const PANTRY_URL = "https://getpantry.cloud";
         let chatPollingTimer = null;
 
         async function readPantryDb() {
             const res = await fetch(PANTRY_URL);
-            if (res.status === 400 || res.status === 404) {
-                return { users: {}, chats: {} };
-            }
-            if (!res.ok) throw new Error("Сервер базы данных временно недоступен");
-            return await res.json();
+            const rawText = await res.text();
+            try {
+                const parsed = JSON.parse(rawText);
+                if (parsed && typeof parsed === "object" && !parsed.error) {
+                    return parsed;
+                }
+            } catch (e) {}
+            return { users: {}, chats: {} };
         }
 
         async function writePantryDb(dbObj) {
@@ -791,7 +794,7 @@
                 console.warn("Ошибка синхронизации профиля:", e);
             }
         };
-        
+
         window.searchCloudUsers = async function() {
             const container = document.getElementById('userSearchResults');
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
@@ -866,6 +869,7 @@
                 reader.readAsDataURL(file);
             });
         }
+
         window.sendCloudPayload = async function(targetRoomKey, text, imageBase64) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -958,3 +962,4 @@
     </script>
 </body>
 </html>
+
