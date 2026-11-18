@@ -903,6 +903,15 @@
                 console.warn("Ошибка разбора пакета:", e);
             }
         }
+        let outboundQueue = [];
+
+        function flushOutboundQueue() {
+            if (!wsConnected || !wsClient || wsClient.readyState !== WebSocket.OPEN) return;
+            while (outboundQueue.length > 0) {
+                const item = outboundQueue.shift();
+                wsClient.send(buildPublishPacket(item.topic, item.payloadStr, item.retain));
+            }
+        }
 
         function initBuiltInCloud() {
             wsConnected = false;
@@ -916,16 +925,23 @@
 
             wsClient.onmessage = (event) => {
                 parseIncomingPackets(new Uint8Array(event.data));
+                if (wsConnected) {
+                    flushOutboundQueue();
+                }
+            };
+
+            wsClient.onerror = () => {
+                wsConnected = false;
             };
 
             wsClient.onclose = () => {
                 wsConnected = false;
-                setTimeout(initBuiltInCloud, 3000);
+                setTimeout(initBuiltInCloud, 1000);
             };
         }
 
         window.syncUserToCloud = function() {
-            if (!appState.isLoggedIn || !appState.user.phone || !wsConnected) return;
+            if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
             const safeKey = encodeURIComponent(cleanPhone);
 
@@ -939,7 +955,13 @@
 
             onlineUsersMap[cleanPhone] = profileData;
             const topic = APP_PREFIX + S + "presence" + S + safeKey;
-            wsClient.send(buildPublishPacket(topic, JSON.stringify(profileData), true));
+            const payloadStr = JSON.stringify(profileData);
+
+            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
+                wsClient.send(buildPublishPacket(topic, payloadStr, true));
+            } else {
+                outboundQueue.push({ topic, payloadStr, retain: true });
+            }
         };
 
         window.searchCloudUsers = function() {
@@ -989,17 +1011,13 @@
             });
         };
 
-        window.subscribeToCloudChat = function(targetRoomKey) {
-            if (!wsConnected) return;
-            const roomId = targetRoomKey.toLowerCase().trim();
-            wsClient.send(buildSubscribePacket(APP_PREFIX + S + "rooms" + S + roomId));
+        window.subscribeToCloudChat = function() {
+            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
+                wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
+            }
         };
 
-               window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
-            if (!wsConnected) {
-                alert("Нет соединения с облаком. Подождите 2 секунды и повторите.");
-                return;
-            }
+        window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -1015,9 +1033,14 @@
             };
 
             const topic = APP_PREFIX + S + "global_bus";
-            wsClient.send(buildPublishPacket(topic, JSON.stringify(payload), false));
+            const payloadStr = JSON.stringify(payload);
+
+            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
+                wsClient.send(buildPublishPacket(topic, payloadStr, false));
+            } else {
+                outboundQueue.push({ topic, payloadStr, retain: false });
+            }
         };
- 
 
         function compressImage(file, maxWidth = 450, quality = 0.65) {
             return new Promise((resolve) => {
@@ -1059,11 +1082,13 @@
 
         initBuiltInCloud();
         setInterval(() => {
-            if (wsConnected) {
+            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
                 wsClient.send(new Uint8Array([0xc0, 0x00]));
-                if (appState.isLoggedIn) window.syncUserToCloud();
+                flushOutboundQueue();
             }
-        }, 20000);
+        }, 8000);
     </script>
 </body>
 </html>
+
+        
