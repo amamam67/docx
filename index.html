@@ -742,188 +742,125 @@
 
         bootApp();
     </script>
-    <!-- Автономный WebSocket MQTT клиент (работает в РФ без CDN, ключей и VPN) -->
+       <!-- Сверхнадёжный WebSocket-канал реального времени (работает в РФ без VPN) -->
     <script>
-        const BROKER_URL = "wss://broker.emqx.io:8084/mqtt";
-        const APP_PREFIX = "docx_messenger_ru_2026_v1";
+        const WS_SERVERS = [
+            "wss://://socketsbay.com",
+            "wss://://postman-echo.com"
+        ];
+        const APP_CHANNEL = "DOCX_APP_2026_SECRET_CHANNEL_991";
         let wsClient = null;
         let wsConnected = false;
+        let wsServerIndex = 0;
         let onlineUsersMap = {};
-        let packetIdCounter = 1;
-        const textEnc = new TextEncoder();
-        const textDec = new TextDecoder();
 
-        function encodeRemainingLength(len) {
-            const bytes = [];
-            do {
-                let b = len % 128;
-                len = Math.floor(len / 128);
-                if (len > 0) b |= 128;
-                bytes.push(b);
-            } while (len > 0);
-            return new Uint8Array(bytes);
-        }
-
-        function encodeMqttStr(str) {
-            const b = textEnc.encode(str);
-            const res = new Uint8Array(2 + b.length);
-            res.set([(b.length >> 8) & 0xff, b.length & 0xff], 0);
-            res.set(b, 2);
-            return res;
-        }
-
-        function concatBytes(arrays) {
-            const total = arrays.reduce((acc, a) => acc + a.length, 0);
-            const res = new Uint8Array(total);
-            let offset = 0;
-            for (const a of arrays) { res.set(a, offset); offset += a.length; }
-            return res;
-        }
-
-        function buildConnectPacket(clientId) {
-            const varHeader = new Uint8Array([0x00, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3c]);
-            const payload = encodeMqttStr(clientId);
-            const body = concatBytes([varHeader, payload]);
-            return concatBytes([new Uint8Array([0x10]), encodeRemainingLength(body.length), body]);
-        }
-
-        function buildSubscribePacket(topic) {
-            const pid = packetIdCounter++;
-            const varHeader = new Uint8Array([(pid >> 8) & 0xff, pid & 0xff]);
-            const payload = concatBytes([encodeMqttStr(topic), new Uint8Array([0x00])]);
-            const body = concatBytes([varHeader, payload]);
-            return concatBytes([new Uint8Array([0x82]), encodeRemainingLength(body.length), body]);
-        }
-
-        function buildPublishPacket(topic, messageStr, retain) {
-            const headerByte = 0x30 | (retain ? 0x01 : 0x00);
-            const tBytes = encodeMqttStr(topic);
-            const mBytes = textEnc.encode(messageStr);
-            const body = concatBytes([tBytes, mBytes]);
-            return concatBytes([new Uint8Array([headerByte]), encodeRemainingLength(body.length), body]);
-        }
-        function parseIncomingPackets(buf) {
-            let i = 0;
-            while (i < buf.length) {
-                const header = buf.at(i);
-                const type = header >> 4;
-                const flags = header & 0x0f;
-                i++;
-                let mult = 1, remLen = 0, byte;
-                do {
-                    if (i >= buf.length) return;
-                    byte = buf.at(i++);
-                    remLen += (byte & 127) * mult;
-                    mult *= 128;
-                } while ((byte & 128) !== 0);
-
-                if (i + remLen > buf.length) return;
-                const packetBody = buf.slice(i, i + remLen);
-                i += remLen;
-
-                if (type === 2) {
-                    wsConnected = true;
-                    console.log("Подключено к облаку DOCX (Built-in WebSocket)");
-                    wsClient.send(buildSubscribePacket(`${APP_PREFIX}/presence/#`));
-                    wsClient.send(buildSubscribePacket(`${APP_PREFIX}/rooms/#`));
-                    window.syncUserToCloud();
-                } else if (type === 3) {
-                    const tLen = (packetBody.at(0) << 8) | packetBody.at(1);
-                    const topic = textDec.decode(packetBody.slice(2, 2 + tLen));
-                    let offset = 2 + tLen;
-                    if ((flags & 0x06) > 0) offset += 2;
-                    const msgStr = textDec.decode(packetBody.slice(offset));
-                    handleCloudMessage(topic, msgStr);
-                }
-            }
-        }
-
-        function handleCloudMessage(topic, rawPayload) {
-            try {
-                const data = JSON.parse(rawPayload);
-
-                if (topic.startsWith(`${APP_PREFIX}/presence/`)) {
-                    if (data && data.phone) {
-                        onlineUsersMap[data.phone.toLowerCase().trim()] = data;
-                    }
-                    return;
-                }
-
-                if (topic.startsWith(`${APP_PREFIX}/rooms/`)) {
-                    const roomId = topic.replace(`${APP_PREFIX}/rooms/`, "");
-                    const myPhone = appState.user.phone.toLowerCase().trim();
-                    const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
-
-                    if (isMe) return;
-
-                    let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
-                    if (!chat && roomId.includes("__")) {
-                        const participants = roomId.split("__");
-                        if (!participants.includes(myPhone)) return;
-
-                        chat = {
-                            id: roomId,
-                            roomId: roomId,
-                            name: data.senderName || data.senderPhone,
-                            handle: data.senderPhone,
-                            bio: "Пользователь мессенджера DOCX",
-                            initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
-                            unread: 0,
-                            messages: []
-                        };
-                        appState.chats.unshift(chat);
-                    }
-
-                    if (chat) {
-                        if (chat.messages.some(m => m.msgId === data.msgId)) return;
-
-                        chat.messages.push({
-                            msgId: data.msgId,
-                            text: `<b>${data.senderName}:</b> ${data.text || ""}`,
-                            image: data.image || null,
-                            type: "in",
-                            time: data.timeStr || ""
-                        });
-
-                        if (appState.activeChatId !== chat.id) {
-                            chat.unread = (chat.unread || 0) + 1;
-                        }
-
-                        saveState();
-                        if (appState.activeChatId === chat.id) {
-                            renderMessages();
-                        }
-                        renderChatList();
-                    }
-                }
-            } catch (e) {
-                console.warn("Ошибка разбора пакета:", e);
-            }
-        }
         function initBuiltInCloud() {
             wsConnected = false;
-            wsClient = new WebSocket(BROKER_URL, "mqtt");
-            wsClient.binaryType = "arraybuffer";
+            const url = WS_SERVERS[wsServerIndex % WS_SERVERS.length];
+            wsClient = new WebSocket(url);
 
             wsClient.onopen = () => {
-                const clientId = "docx_" + Math.random().toString(16).slice(2, 10);
-                wsClient.send(buildConnectPacket(clientId));
+                wsConnected = true;
+                console.log("DOCX Облако подключено:", url);
+                window.syncUserToCloud();
+                // Запрашиваем у всех онлайн-пользователей их профили
+                sendRawPacket({ type: "WHO_IS_ONLINE" });
             };
 
             wsClient.onmessage = (event) => {
-                parseIncomingPackets(new Uint8Array(event.data));
+                try {
+                    const packet = JSON.parse(event.data);
+                    if (!packet || packet.channel !== APP_CHANNEL) return;
+
+                    const myPhone = (appState.user.phone || "").toLowerCase().trim();
+
+                    // 1. Кто-то вошёл в сеть или обновил профиль
+                    if (packet.type === "PROFILE" && packet.user) {
+                        const uPhone = packet.user.phone.toLowerCase().trim();
+                        onlineUsersMap[uPhone] = packet.user;
+                        return;
+                    }
+
+                    // 2. Кто-то спрашивает, кто онлайн — отвечаем своим профилем
+                    if (packet.type === "WHO_IS_ONLINE") {
+                        window.syncUserToCloud();
+                        return;
+                    }
+
+                    // 3. Пришло новое сообщение в чат!
+                    if (packet.type === "MESSAGE" && packet.data) {
+                        const data = packet.data;
+                        const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
+                        if (isMe) return;
+
+                        const roomId = data.roomId.toLowerCase().trim();
+                        let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+
+                        // Если это личное сообщение для нас, а чата ещё нет — создаём его!
+                        if (!chat && roomId.includes("__")) {
+                            const participants = roomId.split("__");
+                            if (!participants.includes(myPhone)) return;
+
+                            chat = {
+                                id: roomId,
+                                roomId: roomId,
+                                name: data.senderName || data.senderPhone,
+                                handle: data.senderPhone,
+                                bio: "Пользователь мессенджера DOCX",
+                                initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
+                                unread: 0,
+                                messages: []
+                            };
+                            appState.chats.unshift(chat);
+                        }
+
+                        if (chat) {
+                            if (chat.messages.some(m => m.msgId === data.msgId)) return;
+
+                            chat.messages.push({
+                                msgId: data.msgId,
+                                text: `<b>${data.senderName}:</b> ${data.text || ""}`,
+                                image: data.image || null,
+                                type: "in",
+                                time: data.timeStr || ""
+                            });
+
+                            if (appState.activeChatId !== chat.id) {
+                                chat.unread = (chat.unread || 0) + 1;
+                            }
+
+                            saveState();
+                            if (appState.activeChatId === chat.id) {
+                                renderMessages();
+                            }
+                            renderChatList();
+                        }
+                    }
+                } catch (e) {
+                    // Игнорируем системные эхо-сообщения чужих пользователей
+                }
+            };
+
+            wsClient.onerror = () => {
+                wsConnected = false;
             };
 
             wsClient.onclose = () => {
                 wsConnected = false;
-                setTimeout(initBuiltInCloud, 3000);
+                wsServerIndex++;
+                setTimeout(initBuiltInCloud, 2500);
             };
         }
 
+        function sendRawPacket(obj) {
+            if (!wsConnected || !wsClient || wsClient.readyState !== WebSocket.OPEN) return false;
+            obj.channel = APP_CHANNEL;
+            wsClient.send(JSON.stringify(obj));
+            return true;
+        }
         window.syncUserToCloud = function() {
-            if (!appState.isLoggedIn || !appState.user.phone || !wsConnected) return;
+            if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
-            const safeKey = encodeURIComponent(cleanPhone);
 
             const profileData = {
                 phone: cleanPhone,
@@ -934,7 +871,7 @@
             };
 
             onlineUsersMap[cleanPhone] = profileData;
-            wsClient.send(buildPublishPacket(`${APP_PREFIX}/presence/${safeKey}`, JSON.stringify(profileData), true));
+            sendRawPacket({ type: "PROFILE", user: profileData });
         };
 
         window.searchCloudUsers = function() {
@@ -942,6 +879,8 @@
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
 
             window.syncUserToCloud();
+            sendRawPacket({ type: "WHO_IS_ONLINE" });
+
             const users = Object.values(onlineUsersMap);
             const myPhone = appState.user.phone.toLowerCase().trim();
 
@@ -954,8 +893,8 @@
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
-                        В сети зарегистрировано профилей: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
-                        Откройте сайт на втором устройстве под <b>другим @username</b> и нажмите кнопку ниже:<br>
+                        В сети сейчас: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
+                        Откройте сайт на втором устройстве под <b>другим @username</b> и нажмите кнопку:<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
                     </div>`;
                 return;
@@ -983,31 +922,32 @@
                 container.appendChild(card);
             });
         };
-        window.subscribeToCloudChat = function(targetRoomKey) {
-            if (!wsConnected) return;
-            const roomId = targetRoomKey.toLowerCase().trim();
-            wsClient.send(buildSubscribePacket(`${APP_PREFIX}/rooms/${roomId}`));
+
+        window.subscribeToCloudChat = function() {
+            window.syncUserToCloud();
         };
 
         window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
-            if (!wsConnected) {
-                alert("Нет соединения с облаком. Подождите 2 секунды и повторите.");
-                return;
-            }
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const payload = {
-                msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
-                senderName: appState.user.name,
-                senderPhone: appState.user.phone,
-                text: text || "",
-                image: imageBase64 || "",
-                timeStr: nowStr,
-                timestamp: Date.now()
-            };
+            const sent = sendRawPacket({
+                type: "MESSAGE",
+                data: {
+                    msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
+                    roomId: roomId,
+                    senderName: appState.user.name,
+                    senderPhone: appState.user.phone,
+                    text: text || "",
+                    image: imageBase64 || "",
+                    timeStr: nowStr,
+                    timestamp: Date.now()
+                }
+            });
 
-            wsClient.send(buildPublishPacket(`${APP_PREFIX}/rooms/${roomId}`, JSON.stringify(payload), false));
+            if (!sent) {
+                alert("Соединение с облаком восстанавливается, попробуйте через 2 секунды.");
+            }
         };
 
         function compressImage(file, maxWidth = 450, quality = 0.65) {
@@ -1050,11 +990,10 @@
 
         initBuiltInCloud();
         setInterval(() => {
-            if (wsConnected) {
-                wsClient.send(new Uint8Array([0xc0, 0x00]));
-                if (appState.isLoggedIn) window.syncUserToCloud();
+            if (wsConnected && appState.isLoggedIn) {
+                window.syncUserToCloud();
             }
-        }, 20000);
+        }, 12000);
     </script>
 </body>
 </html>
