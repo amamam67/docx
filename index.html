@@ -219,7 +219,7 @@
             <div id="authBox">
                 <input type="text" class="auth-input" id="regName" placeholder="Ваше имя (например: Кирилл)" style="display: none;">
                 <input type="text" class="auth-input" id="authPhone" placeholder="@username или телефон" value="opgk1rill!">
-                <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="123456">
+                <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="">
                 <button type="button" class="auth-btn" id="authSubmitBtn" onclick="handleLoginSubmit()">Войти в DOCX</button>
             </div>
             <div class="auth-switch" id="authSwitchBtn" onclick="toggleAuthMode()">
@@ -431,7 +431,7 @@
         if (!accountsDb['opgk1rill!']) {
             accountsDb['opgk1rill!'] = {
                 phone: 'opgk1rill!',
-                pass: '123456',
+                pass: 'kirill_12_tv',
                 name: 'Кирилл',
                 bio: 'Создатель мессенджера DOCX',
                 avatar: { type: 'initials', value: 'КИ' }
