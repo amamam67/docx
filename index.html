@@ -259,7 +259,7 @@
                         <div class="avatar" id="myAvatar">КИ</div>
                         <div class="user-meta">
                             <div class="user-meta-name" id="myName">Кирилл</div>
-                            <div class="user-meta-phone" id="myPhone">opgk1rill!</div>
+                            <div class="user-meta-phone" id="myPhone">@user</div>
                         </div>
                     </div>
                     <div class="docx-badge">DOCX <span style="color:#f59e0b;">○</span></div>
@@ -371,15 +371,15 @@
                     <div>
                         <div class="form-group">
                             <label class="form-label">Отображаемое имя</label>
-                            <input type="text" class="auth-input" id="editNameInput" value="Кирилл">
+                            <input type="text" class="auth-input" id="editNameInput" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Ваш @username или телефон (по нему вас найдут друзья)</label>
-                            <input type="text" class="auth-input" id="editPhoneInput" value="opgk1rill!">
+                            <input type="text" class="auth-input" id="editPhoneInput" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label">О себе (статус)</label>
-                            <input type="text" class="auth-input" id="editBioInput" value="Создатель мессенджера DOCX">
+                            <input type="text" class="auth-input" id="editBioInput" value="">
                         </div>
                         <button type="button" class="auth-btn" onclick="saveProfileChanges()">Сохранить изменения</button>
                     </div>
@@ -473,8 +473,8 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v26';
-        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v3';
+        const STORAGE_KEY = 'docx_messenger_state_v28';
+        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v5';
         const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
 
@@ -493,8 +493,6 @@
         } catch (e) {
             accountsDb = {};
         }
-
-       const VERIFIED_HANDLES = ['opgk1rill!','@opgk1rill!'];
 
         function saveAccountsDb() {
             try {
@@ -528,10 +526,10 @@
             isLoggedIn: false,
             activeChatId: 'global_docx_chat',
             user: {
-                name: 'Кирилл',
-                phone: 'opgk1rill!',
-                bio: 'Создатель мессенджера DOCX',
-                avatar: { type: 'initials', value: 'КИ' }
+                name: 'Пользователь',
+                phone: '',
+                bio: 'Пользователь мессенджера DOCX',
+                avatar: { type: 'initials', value: 'ПЛ' }
             },
             theme: '',
             isFlat: false,
@@ -596,7 +594,7 @@
                     phone: rawPhone,
                     pass: pass,
                     name: regName,
-                    bio: 'Пользователь мессенджера DOCX',
+                    bio: isUserVerified(rawPhone) ? 'Создатель мессенджера DOCX' : 'Пользователь мессенджера DOCX',
                     avatar: { type: 'initials', value: regName.slice(0, 2).toUpperCase() }
                 };
                 accountsDb[cleanKey] = newAccount;
@@ -886,6 +884,7 @@
                 window.syncUserToCloud();
             }
         }
+
         function renderChatList(filter = '') {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -983,6 +982,7 @@
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         function openUserSearchModal() {
             openModal('newChatModal');
             document.getElementById('userSearchQuery').value = '';
@@ -1042,6 +1042,7 @@
         const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
         const S = String.fromCharCode(47);
         const PUSHER_WS_URL = "wss:" + S + S + "ws-" + PUSHER_CLUSTER + ".pusher.com:443" + S + "app" + S + PUSHER_KEY + "?protocol=7&client=js&version=8.4.0&flash=false";
+
         let pusherSocket = null;
         let pusherConnected = false;
         let pusherSocketId = null;
@@ -1090,6 +1091,7 @@
                 }
                 return;
             }
+
             if (packet.type === "ROOM_CREATED" && packet.room) {
                 if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
                     appState.chats.unshift(packet.room);
@@ -1138,6 +1140,7 @@
                     };
                     appState.chats.unshift(chat);
                 }
+
                 if (chat) {
                     if (chat.messages.some(m => m.msgId === data.msgId)) return;
 
@@ -1184,6 +1187,7 @@
             updateConnectionBadge(false);
 
             pusherSocket = new WebSocket(PUSHER_WS_URL);
+
             pusherSocket.onmessage = async (event) => {
                 try {
                     const frame = JSON.parse(event.data);
@@ -1228,6 +1232,7 @@
                 setTimeout(initPusherRealtime, 2000);
             };
         }
+
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
@@ -1258,6 +1263,7 @@
                 ((u.name && u.name.toLowerCase().includes(qText)) ||
                  (u.phone && u.phone.toLowerCase().includes(qText)))
             );
+
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
@@ -1290,6 +1296,7 @@
                 container.appendChild(card);
             });
         };
+
         window.subscribeToCloudChat = function() {
             window.syncUserToCloud();
         };
@@ -1332,6 +1339,7 @@
                 reader.readAsDataURL(file);
             });
         }
+
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
             if (!file) return;
