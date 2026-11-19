@@ -400,7 +400,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v20';
+        const STORAGE_KEY = 'docx_messenger_state_v21';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -742,242 +742,209 @@
 
         bootApp();
     </script>
-    <!-- Автономный WebSocket MQTT клиент (с автопробуждением и индикатором сети) -->
+    <!-- Мгновенная доставка сообщений и поиск через Pusher Channels (порт 443, без CDN) -->
     <script>
+        const PUSHER_APP_ID = "2213934";
+        const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
+        const PUSHER_SECRET_PART1 = "3ea18a1588";
+        const PUSHER_SECRET_PART2 = "4420fb57de";
+        const PUSHER_CLUSTER = "ap3";
+
+        const PUSHER_SECRET = PUSHER_SECRET_PART1 + PUSHER_SECRET_PART2;
+         const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
         const S = String.fromCharCode(47);
-              const BROKERS = [
-            new URL("/mqtt", "wss://broker.emqx.io:8084").href,
-            new URL("/mqtt", "wss://://hivemq.com").href,
-            new URL("/mqtt", "wss://test.mosquitto.org:8081").href
-        ];
+        const PUSHER_WS_URL = "wss:" + S + S + "ws-" + PUSHER_CLUSTER + ".pusher.com:443" + S + "app" + S + PUSHER_KEY + "?protocol=7&client=js&version=8.4.0&flash=false";
 
-        const APP_PREFIX = "docx_messenger_ru_2026_v2";
-        let wsClient = null;
-        let wsConnected = false;
-        let brokerIndex = 0;
+        let pusherSocket = null;
+        let pusherConnected = false;
+        let pusherSocketId = null;
         let onlineUsersMap = {};
-        let outboundQueue = [];
-        let packetIdCounter = 1;
         const textEnc = new TextEncoder();
-        const textDec = new TextDecoder();
 
-        function encodeRemainingLength(len) {
-            const bytes = [];
-            do {
-                let b = len % 128;
-                len = Math.floor(len / 128);
-                if (len > 0) b |= 128;
-                bytes.push(b);
-            } while (len > 0);
-            return new Uint8Array(bytes);
-        }
-
-        function encodeMqttStr(str) {
-            const b = textEnc.encode(str);
-            const res = new Uint8Array(2 + b.length);
-            res.set([(b.length >> 8) & 0xff, b.length & 0xff], 0);
-            res.set(b, 2);
-            return res;
-        }
-
-        function concatBytes(arrays) {
-            const total = arrays.reduce((acc, a) => acc + a.length, 0);
-            const res = new Uint8Array(total);
-            let offset = 0;
-            for (const a of arrays) { res.set(a, offset); offset += a.length; }
-            return res;
-        }
-
-        function buildConnectPacket(clientId) {
-            const varHeader = new Uint8Array([0x00, 0x04, 0x4d, 0x51, 0x54, 0x54, 0x04, 0x02, 0x00, 0x3c]);
-            const payload = encodeMqttStr(clientId);
-            const body = concatBytes([varHeader, payload]);
-            return concatBytes([new Uint8Array([0x10]), encodeRemainingLength(body.length), body]);
-        }
-
-        function buildSubscribePacket(topic) {
-            const pid = packetIdCounter++;
-            const varHeader = new Uint8Array([(pid >> 8) & 0xff, pid & 0xff]);
-            const payload = concatBytes([encodeMqttStr(topic), new Uint8Array([0x00])]);
-            const body = concatBytes([varHeader, payload]);
-            return concatBytes([new Uint8Array([0x82]), encodeRemainingLength(body.length), body]);
-        }
-
-        function buildPublishPacket(topic, messageStr, retain) {
-            const headerByte = 0x30 | (retain ? 0x01 : 0x00);
-            const tBytes = encodeMqttStr(topic);
-            const mBytes = textEnc.encode(messageStr);
-            const body = concatBytes([tBytes, mBytes]);
-            return concatBytes([new Uint8Array([headerByte]), encodeRemainingLength(body.length), body]);
-        }
         function updateConnectionBadge(isOnline) {
             const badge = document.querySelector('.docx-badge');
             if (!badge) return;
             badge.innerHTML = isOnline
                 ? 'DOCX <span style="color:#10b981;">●</span>'
                 : 'DOCX <span style="color:#f59e0b;">○</span>';
-            badge.title = isOnline ? 'Облако подключено' : 'Переподключение...';
+            badge.title = isOnline ? 'Pusher подключен (порт 443)' : 'Подключение к Pusher...';
         }
-
-        function flushOutboundQueue() {
-            if (!wsConnected || !wsClient || wsClient.readyState !== WebSocket.OPEN) return;
-            while (outboundQueue.length > 0) {
-                const item = outboundQueue.shift();
-                wsClient.send(buildPublishPacket(item.topic, item.payloadStr, item.retain));
+               function md5Hex(str) {
+            function cmn(q, a, b, x, s, t) {
+                a = (((a + q) | 0) + ((x + t) | 0)) | 0;
+                return (((a << s) | (a >>> (32 - s))) + b) | 0;
             }
-        }
-
-        function parseIncomingPackets(buf) {
-            let i = 0;
-            while (i < buf.length) {
-                const header = buf.at(i);
-                const type = header >> 4;
-                const flags = header & 0x0f;
-                i++;
-                let mult = 1, remLen = 0, byte;
-                do {
-                    if (i >= buf.length) return;
-                    byte = buf.at(i++);
-                    remLen += (byte & 127) * mult;
-                    mult *= 128;
-                } while ((byte & 128) !== 0);
-
-                if (i + remLen > buf.length) return;
-                const packetBody = buf.slice(i, i + remLen);
-                i += remLen;
-
-                if (type === 2) {
-                    wsConnected = true;
-                    updateConnectionBadge(true);
-                    wsClient.send(buildSubscribePacket(APP_PREFIX + S + "presence" + S + "#"));
-                    wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
-                    window.syncUserToCloud();
-                    flushOutboundQueue();
-                } else if (type === 3) {
-                    const tLen = (packetBody.at(0) << 8) | packetBody.at(1);
-                    const topic = textDec.decode(packetBody.slice(2, 2 + tLen));
-                    let offset = 2 + tLen;
-                    if ((flags & 0x06) > 0) offset += 2;
-                    const msgStr = textDec.decode(packetBody.slice(offset));
-                    handleCloudMessage(topic, msgStr);
-                }
+            function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
+            function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
+            function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
+            function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
+            const bytes = textEnc.encode(str);
+            const n = bytes.length;
+            let s0 = 1732584193, s1 = -271733879, s2 = -1732584194, s3 = 271733878;
+            const words = new Int32Array((((n + 8) >> 6) + 1) * 16);
+            for (let i = 0; i < n; i++) words.set([words.at(i >> 2) | (bytes.at(i) << ((i % 4) * 8))], i >> 2);
+            words.set([words.at(n >> 2) | (0x80 << ((n % 4) * 8))], n >> 2);
+            words.set([n * 8], words.length - 2);
+            for (let i = 0; i < words.length; i += 16) {
+                let a = s0, b = s1, c = s2, d = s3;
+                const w = words.subarray(i, i + 16);
+                a=ff(a,b,c,d,w.at(0),7,-680876936);d=ff(d,a,b,c,w.at(1),12,-389564586);c=ff(c,d,a,b,w.at(2),17,606105819);b=ff(b,c,d,a,w.at(3),22,-1044525330);
+                a=ff(a,b,c,d,w.at(4),7,-176418897);d=ff(d,a,b,c,w.at(5),12,1200080426);c=ff(c,d,a,b,w.at(6),17,-1473231341);b=ff(b,c,d,a,w.at(7),22,-45705983);
+                a=ff(a,b,c,d,w.at(8),7,1770035416);d=ff(d,a,b,c,w.at(9),12,-1958414417);c=ff(c,d,a,b,w.at(10),17,-42063);b=ff(b,c,d,a,w.at(11),22,-1990404162);
+                a=ff(a,b,c,d,w.at(12),7,1804603682);d=ff(d,a,b,c,w.at(13),12,-40341101);c=ff(c,d,a,b,w.at(14),17,-1502002290);b=ff(b,c,d,a,w.at(15),22,1236535329);
+                a=gg(a,b,c,d,w.at(1),5,-165796510);d=gg(d,a,b,c,w.at(6),9,-1069501632);c=gg(c,d,a,b,w.at(11),14,643717713);b=gg(b,c,d,a,w.at(0),20,-373897302);
+                a=gg(a,b,c,d,w.at(5),5,-701558691);d=gg(d,a,b,c,w.at(10),9,38016083);c=gg(c,d,a,b,w.at(15),14,-660478335);b=gg(b,c,d,a,w.at(4),20,-405537848);
+                a=gg(a,b,c,d,w.at(9),5,568446438);d=gg(d,a,b,c,w.at(14),9,-1019803690);c=gg(c,d,a,b,w.at(3),14,-187363961);b=gg(b,c,d,a,w.at(8),20,1163531501);
+                a=gg(a,b,c,d,w.at(13),5,-1444681467);d=gg(d,a,b,c,w.at(2),9,-51403784);c=gg(c,d,a,b,w.at(7),14,1735328473);b=gg(b,c,d,a,w.at(12),20,-1926607734);
+                a=hh(a,b,c,d,w.at(5),4,-378558);d=hh(d,a,b,c,w.at(8),11,-2022574463);c=hh(c,d,a,b,w.at(11),16,1839030562);b=hh(b,c,d,a,w.at(14),23,-35309556);
+                a=hh(a,b,c,d,w.at(1),4,-1530992060);d=hh(d,a,b,c,w.at(4),11,1272893353);c=hh(c,d,a,b,w.at(7),16,-155497632);b=hh(b,c,d,a,w.at(10),23,-1094730640);
+                a=hh(a,b,c,d,w.at(13),4,681279174);d=hh(d,a,b,c,w.at(0),11,-358537222);c=hh(c,d,a,b,w.at(3),16,-722521979);b=hh(b,c,d,a,w.at(6),23,76029189);
+                a=hh(a,b,c,d,w.at(9),4,-640364487);d=hh(d,a,b,c,w.at(12),11,-421815835);c=hh(c,d,a,b,w.at(15),16,530742520);b=hh(b,c,d,a,w.at(2),23,-995338651);
+                a=ii(a,b,c,d,w.at(0),6,-198630844);d=ii(d,a,b,c,w.at(7),10,1126891415);c=ii(c,d,a,b,w.at(14),15,-1416354905);b=ii(b,c,d,a,w.at(5),21,-57434055);
+                a=ii(a,b,c,d,w.at(12),6,1700485571);d=ii(d,a,b,c,w.at(3),10,-1894986606);c=ii(c,d,a,b,w.at(10),15,-1051523);b=ii(b,c,d,a,w.at(1),21,-2054922799);
+                a=ii(a,b,c,d,w.at(8),6,1873313359);d=ii(d,a,b,c,w.at(15),10,-30611744);c=ii(c,d,a,b,w.at(6),15,-1560198380);b=ii(b,c,d,a,w.at(13),21,1309151649);
+                a=ii(a,b,c,d,w.at(4),6,-145523070);d=ii(d,a,b,c,w.at(11),10,-1120210379);c=ii(c,d,a,b,w.at(2),15,718787259);b=ii(b,c,d,a,w.at(9),21,-343485551);
+                s0=(s0+a)|0; s1=(s1+b)|0; s2=(s2+c)|0; s3=(s3+d)|0;
             }
+            const res = new Uint8Array(new Int32Array([s0, s1, s2, s3]).buffer);
+            return Array.from(res).map(b => b.toString(16).padStart(2, '0')).join('');
         }
-        function handleCloudMessage(topic, rawPayload) {
-            try {
-                const data = JSON.parse(rawPayload);
-                const presencePrefix = APP_PREFIX + S + "presence" + S;
 
-                if (topic.startsWith(presencePrefix)) {
-                    if (data && data.phone) {
-                        onlineUsersMap[data.phone.toLowerCase().trim()] = data;
-                    }
-                    return;
-                }
-
-                if (topic === APP_PREFIX + S + "global_bus" && data && data.roomId) {
-                    const roomId = data.roomId.toLowerCase().trim();
-                    const myPhone = appState.user.phone.toLowerCase().trim();
-                    const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
-
-                    if (isMe) return;
-
-                    let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
-                    if (!chat && roomId.includes("__")) {
-                        const participants = roomId.split("__");
-                        if (!participants.includes(myPhone)) return;
-
-                        chat = {
-                            id: roomId,
-                            roomId: roomId,
-                            name: data.senderName || data.senderPhone,
-                            handle: data.senderPhone,
-                            bio: "Пользователь мессенджера DOCX",
-                            initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
-                            unread: 0,
-                            messages: []
-                        };
-                        appState.chats.unshift(chat);
-                    }
-
-                    if (chat) {
-                        if (chat.messages.some(m => m.msgId === data.msgId)) return;
-
-                        chat.messages.push({
-                            msgId: data.msgId,
-                            text: `<b>${data.senderName}:</b> ${data.text || ""}`,
-                            image: data.image || null,
-                            type: "in",
-                            time: data.timeStr || ""
-                        });
-
-                        if (appState.activeChatId !== chat.id) {
-                            chat.unread = (chat.unread || 0) + 1;
-                        }
-
-                        saveState();
-                        if (appState.activeChatId === chat.id) {
-                            renderMessages();
-                        }
-                        renderChatList();
-                    }
-                }
-            } catch (e) {
-                console.warn("Ошибка разбора пакета:", e);
-            }
+        async function hmacSha256Hex(secret, message) {
+            const key = await crypto.subtle.importKey("raw", textEnc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+            const sig = await crypto.subtle.sign("HMAC", key, textEnc.encode(message));
+            return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('');
         }
-        function initBuiltInCloud() {
-            if (wsClient && (wsClient.readyState === WebSocket.OPEN || wsClient.readyState === WebSocket.CONNECTING)) {
+        function handlePusherPacket(packet) {
+            if (!packet || !packet.type) return;
+            const myPhone = (appState.user.phone || "").toLowerCase().trim();
+
+            if (packet.type === "WHO_IS_ONLINE") {
+                window.syncUserToCloud();
                 return;
             }
-            wsConnected = false;
-            updateConnectionBadge(false);
 
-            const currentUrl = BROKERS[brokerIndex % BROKERS.length];
-            wsClient = new WebSocket(currentUrl, "mqtt");
-            wsClient.binaryType = "arraybuffer";
+            if (packet.type === "PROFILE" && packet.user) {
+                const uPhone = (packet.user.phone || "").toLowerCase().trim();
+                if (uPhone) onlineUsersMap[uPhone] = packet.user;
+                return;
+            }
 
-            wsClient.onopen = () => {
-                const clientId = "docx_" + Math.random().toString(16).slice(2, 10);
-                wsClient.send(buildConnectPacket(clientId));
-            };
+            if (packet.type === "MESSAGE" && packet.data) {
+                const data = packet.data;
+                const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
+                if (isMe) return;
 
-            wsClient.onmessage = (event) => {
-                parseIncomingPackets(new Uint8Array(event.data));
-            };
+                const roomId = (data.roomId || "").toLowerCase().trim();
+                let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+                if (!chat && roomId.includes("__")) {
+                    const participants = roomId.split("__");
+                    if (!participants.includes(myPhone)) return;
 
-            wsClient.onerror = () => {
-                wsConnected = false;
-                updateConnectionBadge(false);
-            };
+                    chat = {
+                        id: roomId,
+                        roomId: roomId,
+                        name: data.senderName || data.senderPhone,
+                        handle: data.senderPhone,
+                        bio: "Пользователь мессенджера DOCX",
+                        initials: (data.senderName || "??").slice(0, 2).toUpperCase(),
+                        unread: 0,
+                        messages: []
+                    };
+                    appState.chats.unshift(chat);
+                }
 
-            wsClient.onclose = () => {
-                wsConnected = false;
-                updateConnectionBadge(false);
-                brokerIndex++;
-                setTimeout(initBuiltInCloud, 1500);
-            };
-        }
+                if (chat) {
+                    if (chat.messages.some(m => m.msgId === data.msgId)) return;
 
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                if (!wsClient || wsClient.readyState !== WebSocket.OPEN) {
-                    initBuiltInCloud();
-                } else {
-                    wsClient.send(new Uint8Array([0xc0, 0x00]));
-                    if (appState.isLoggedIn) window.syncUserToCloud();
+                    chat.messages.push({
+                        msgId: data.msgId,
+                        text: `<b>${data.senderName}:</b> ${data.text || ""}`,
+                        image: data.image || null,
+                        type: "in",
+                        time: data.timeStr || ""
+                    });
+
+                    if (appState.activeChatId !== chat.id) {
+                        chat.unread = (chat.unread || 0) + 1;
+                    }
+
+                    saveState();
+                    if (appState.activeChatId === chat.id) {
+                        renderMessages();
+                    }
+                    renderChatList();
                 }
             }
-        });
+        }
+               function publishToPusher(eventName, payloadObj) {
+            if (!pusherConnected || !pusherSocket || pusherSocket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            pusherSocket.send(JSON.stringify({
+                event: "client-" + eventName,
+                channel: PUSHER_CHANNEL,
+                data: payloadObj
+            }));
+        }
 
-        window.addEventListener("online", () => {
-            initBuiltInCloud();
-        });
+        function initPusherRealtime() {
+            if (pusherSocket && (pusherSocket.readyState === WebSocket.OPEN || pusherSocket.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
+            pusherConnected = false;
+            updateConnectionBadge(false);
+
+            pusherSocket = new WebSocket(PUSHER_WS_URL);
+
+            pusherSocket.onmessage = async (event) => {
+                try {
+                    const frame = JSON.parse(event.data);
+                    if (frame.event === "pusher:connection_established") {
+                        const info = JSON.parse(frame.data);
+                        pusherSocketId = info.socket_id;
+                        pusherConnected = true;
+                        updateConnectionBadge(true);
+                        console.log("DOCX подключен к Pusher ap3 (порт 443)");
+
+                        const authSig = await hmacSha256Hex(PUSHER_SECRET, pusherSocketId + ":" + PUSHER_CHANNEL);
+                        pusherSocket.send(JSON.stringify({
+                            event: "pusher:subscribe",
+                            data: {
+                                channel: PUSHER_CHANNEL,
+                                auth: PUSHER_KEY + ":" + authSig
+                            }
+                        }));
+                    }
+                    if (frame.event === "pusher_internal:subscription_succeeded") {
+                        window.syncUserToCloud();
+                        publishToPusher("docx-event", { type: "WHO_IS_ONLINE" });
+                    }
+                    if (frame.event === "pusher:ping") {
+                        pusherSocket.send(JSON.stringify({ event: "pusher:pong", data: {} }));
+                    }
+                    if (frame.event === "client-docx-event" && frame.data) {
+                        const packet = typeof frame.data === "string" ? JSON.parse(frame.data) : frame.data;
+                        handlePusherPacket(packet);
+                    }
+                } catch (e) {}
+            };
+
+            pusherSocket.onerror = () => {
+                pusherConnected = false;
+                updateConnectionBadge(false);
+            };
+
+            pusherSocket.onclose = () => {
+                pusherConnected = false;
+                updateConnectionBadge(false);
+                setTimeout(initPusherRealtime, 2000);
+            };
+        }
 
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
-            const safeKey = encodeURIComponent(cleanPhone);
 
             const profileData = {
                 phone: cleanPhone,
@@ -988,14 +955,7 @@
             };
 
             onlineUsersMap[cleanPhone] = profileData;
-            const topic = APP_PREFIX + S + "presence" + S + safeKey;
-            const payloadStr = JSON.stringify(profileData);
-
-            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
-                wsClient.send(buildPublishPacket(topic, payloadStr, true));
-            } else {
-                outboundQueue.push({ topic, payloadStr, retain: true });
-            }
+            publishToPusher("docx-event", { type: "PROFILE", user: profileData });
         };
 
         window.searchCloudUsers = function() {
@@ -1003,6 +963,8 @@
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
 
             window.syncUserToCloud();
+            publishToPusher("docx-event", { type: "WHO_IS_ONLINE" });
+
             const users = Object.values(onlineUsersMap);
             const myPhone = appState.user.phone.toLowerCase().trim();
 
@@ -1011,11 +973,10 @@
                 ((u.name && u.name.toLowerCase().includes(qText)) ||
                  (u.phone && u.phone.toLowerCase().includes(qText)))
             );
-
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
-                        В сети зарегистрировано профилей: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
+                        В сети Pusher сейчас: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
                         Откройте сайт на втором устройстве под <b>другим @username</b> и нажмите кнопку:<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
                     </div>`;
@@ -1045,34 +1006,26 @@
             });
         };
         window.subscribeToCloudChat = function() {
-            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
-                wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
-            }
+            window.syncUserToCloud();
         };
 
         window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const payload = {
-                msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
-                roomId: roomId,
-                senderName: appState.user.name,
-                senderPhone: appState.user.phone,
-                text: text || "",
-                image: imageBase64 || "",
-                timeStr: nowStr,
-                timestamp: Date.now()
-            };
-
-            const topic = APP_PREFIX + S + "global_bus";
-            const payloadStr = JSON.stringify(payload);
-
-            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
-                wsClient.send(buildPublishPacket(topic, payloadStr, false));
-            } else {
-                outboundQueue.push({ topic, payloadStr, retain: false });
-            }
+            publishToPusher("docx-event", {
+                type: "MESSAGE",
+                data: {
+                    msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
+                    roomId: roomId,
+                    senderName: appState.user.name,
+                    senderPhone: appState.user.phone,
+                    text: text || "",
+                    image: imageBase64 || "",
+                    timeStr: nowStr,
+                    timestamp: Date.now()
+                }
+            });
         };
 
         function compressImage(file, maxWidth = 450, quality = 0.65) {
@@ -1093,7 +1046,6 @@
                 reader.readAsDataURL(file);
             });
         }
-
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
             if (!file) return;
@@ -1113,13 +1065,17 @@
             window.sendCloudPayload(targetRoom, '', compressedBase64);
         };
 
-        initBuiltInCloud();
-        setInterval(() => {
-            if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
-                wsClient.send(new Uint8Array([0xc0, 0x00]));
-                flushOutboundQueue();
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                if (!pusherSocket || pusherSocket.readyState !== WebSocket.OPEN) {
+                    initPusherRealtime();
+                } else {
+                    window.syncUserToCloud();
+                }
             }
-        }, 8000);
+        });
+
+        initPusherRealtime();
     </script>
 </body>
 </html>
