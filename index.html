@@ -107,6 +107,13 @@
         .user-meta { min-width: 0; }
         .user-meta-name { font-weight: 700; font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .user-meta-phone { font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+        .verified-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 15px; height: 15px; border-radius: 50%;
+            background: var(--accent); color: var(--accent-text);
+            font-size: 0.65rem; font-weight: 800; margin-left: 5px;
+            vertical-align: middle; flex-shrink: 0;
+        }
         .docx-badge { font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); border: 1px solid var(--border); padding: 4px 10px; border-radius: 10px; letter-spacing: 1px; }
 
         .sidebar-controls { padding: 12px 14px; display: flex; gap: 8px; }
@@ -208,10 +215,10 @@
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <div class="brand-tag">DOCX</div>
-            <p id="authSubtitle">Войдите по @username или номеру телефона</p>
+            <p id="authSubtitle">Войдите по @username и паролю</p>
             <div id="authBox">
                 <input type="text" class="auth-input" id="regName" placeholder="Ваше имя (например: Кирилл)" style="display: none;">
-                <input type="text" class="auth-input" id="authPhone" placeholder="@username или телефон" value="@kirill_chukotka">
+                <input type="text" class="auth-input" id="authPhone" placeholder="@username или телефон" value="opgk1rill!">
                 <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="123456">
                 <button type="button" class="auth-btn" id="authSubmitBtn" onclick="handleLoginSubmit()">Войти в DOCX</button>
             </div>
@@ -229,7 +236,7 @@
                         <div class="avatar" id="myAvatar">КИ</div>
                         <div class="user-meta">
                             <div class="user-meta-name" id="myName">Кирилл</div>
-                            <div class="user-meta-phone" id="myPhone">@kirill_chukotka</div>
+                            <div class="user-meta-phone" id="myPhone">opgk1rill!</div>
                         </div>
                     </div>
                     <div class="docx-badge">DOCX <span style="color:#f59e0b;">○</span></div>
@@ -329,7 +336,7 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Ваш @username или телефон (по нему вас найдут друзья)</label>
-                            <input type="text" class="auth-input" id="editPhoneInput" value="@kirill_chukotka">
+                            <input type="text" class="auth-input" id="editPhoneInput" value="opgk1rill!">
                         </div>
                         <div class="form-group">
                             <label class="form-label">О себе (статус)</label>
@@ -400,8 +407,43 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v21';
+        const STORAGE_KEY = 'docx_messenger_state_v25';
+        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v2';
+        const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
+
+        function isUserVerified(phoneOrHandle) {
+            if (!phoneOrHandle) return false;
+            return VERIFIED_HANDLES.includes(phoneOrHandle.toLowerCase().trim());
+        }
+
+        function getVerifiedBadgeHtml(phoneOrHandle) {
+            return isUserVerified(phoneOrHandle) ? '<span class="verified-badge" title="Подтверждённый аккаунт">✓</span>' : '';
+        }
+
+        let accountsDb = {};
+        try {
+            accountsDb = JSON.parse(localStorage.getItem(ACCOUNTS_DB_KEY)) || {};
+        } catch (e) {
+            accountsDb = {};
+        }
+
+        if (!accountsDb['opgk1rill!']) {
+            accountsDb['opgk1rill!'] = {
+                phone: 'opgk1rill!',
+                pass: '123456',
+                name: 'Кирилл',
+                bio: 'Создатель мессенджера DOCX',
+                avatar: { type: 'initials', value: 'КИ' }
+            };
+            try { localStorage.setItem(ACCOUNTS_DB_KEY, JSON.stringify(accountsDb)); } catch (e) {}
+        }
+
+        function saveAccountsDb() {
+            try {
+                localStorage.setItem(ACCOUNTS_DB_KEY, JSON.stringify(accountsDb));
+            } catch (e) {}
+        }
 
         const defaultChats = [
             {
@@ -430,7 +472,7 @@
             activeChatId: 'global_docx_chat',
             user: {
                 name: 'Кирилл',
-                phone: '@kirill_chukotka',
+                phone: 'opgk1rill!',
                 bio: 'Создатель мессенджера DOCX',
                 avatar: { type: 'initials', value: 'КИ' }
             },
@@ -438,17 +480,26 @@
             isFlat: false,
             chats: defaultChats
         };
-
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+                const cleanKey = (appState.user.phone || '').toLowerCase().trim();
+                if (cleanKey && accountsDb[cleanKey]) {
+                    accountsDb[cleanKey].name = appState.user.name;
+                    accountsDb[cleanKey].bio = appState.user.bio;
+                    accountsDb[cleanKey].avatar = appState.user.avatar;
+                    saveAccountsDb();
+                }
             } catch (e) {
                 console.warn('Локальная память переполнена или ограничена');
             }
         }
 
         function resetAllData() {
-            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(ACCOUNTS_DB_KEY);
+            } catch (e) {}
             location.reload();
         }
 
@@ -456,23 +507,68 @@
             isRegisterMode = !isRegisterMode;
             document.getElementById('regName').style.display = isRegisterMode ? 'block' : 'none';
             document.getElementById('authSubtitle').textContent = isRegisterMode
-                ? 'Создайте профиль — друзья найдут вас по @username или телефону'
-                : 'Войдите по @username или номеру телефона';
-            document.getElementById('authSubmitBtn').textContent = isRegisterMode ? 'Создать аккаунт' : 'Войти в DOCX';
+                ? 'Создайте новый профиль — укажите имя, @username и пароль'
+                : 'Войдите по @username и паролю';
+            document.getElementById('authSubmitBtn').textContent = isRegisterMode ? 'Зарегистрироваться' : 'Войти в DOCX';
             document.getElementById('authSwitchBtn').innerHTML = isRegisterMode
                 ? 'Уже есть аккаунт? <span>Войти</span>'
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
 
         function handleLoginSubmit() {
-            const phone = document.getElementById('authPhone').value.trim();
+            const rawPhone = document.getElementById('authPhone').value.trim();
+            const pass = document.getElementById('authPass').value.trim();
             const regName = document.getElementById('regName').value.trim();
-            if (!phone) return;
-            if (isRegisterMode && regName) {
-                appState.user.name = regName;
-                appState.user.avatar = { type: 'initials', value: regName.slice(0, 2).toUpperCase() };
+            const cleanKey = rawPhone.toLowerCase();
+
+            if (!rawPhone || !pass) {
+                alert('Введите @username (или телефон) и пароль!');
+                return;
             }
-            appState.user.phone = phone;
+
+            if (isRegisterMode) {
+                if (!regName) {
+                    alert('Укажите ваше имя для регистрации!');
+                    return;
+                }
+                if (accountsDb[cleanKey]) {
+                    alert('Пользователь с таким @username уже зарегистрирован! Переключитесь на вход.');
+                    return;
+                }
+                const newAccount = {
+                    phone: rawPhone,
+                    pass: pass,
+                    name: regName,
+                    bio: 'Пользователь мессенджера DOCX',
+                    avatar: { type: 'initials', value: regName.slice(0, 2).toUpperCase() }
+                };
+                accountsDb[cleanKey] = newAccount;
+                saveAccountsDb();
+
+                appState.user = {
+                    name: newAccount.name,
+                    phone: newAccount.phone,
+                    bio: newAccount.bio,
+                    avatar: newAccount.avatar
+                };
+            } else {
+                const existing = accountsDb[cleanKey];
+                if (!existing) {
+                    alert('Такой аккаунт не найден! Нажмите «Зарегистрироваться» внизу, чтобы создать профиль.');
+                    return;
+                }
+                if (existing.pass !== pass) {
+                    alert('Неверный пароль для аккаунта ' + rawPhone + '!');
+                    return;
+                }
+                appState.user = {
+                    name: existing.name,
+                    phone: existing.phone,
+                    bio: existing.bio,
+                    avatar: existing.avatar
+                };
+            }
+
             appState.isLoggedIn = true;
             saveState();
             bootApp();
@@ -593,7 +689,7 @@
             const newBio = document.getElementById('editBioInput').value.trim();
             if (newName) {
                 appState.user.name = newName;
-                document.getElementById('myName').textContent = newName;
+                document.getElementById('myName').innerHTML = newName + getVerifiedBadgeHtml(newPhone || appState.user.phone);
                 if (appState.user.avatar.type === 'initials') {
                     appState.user.avatar.value = newName.slice(0, 2).toUpperCase();
                 }
@@ -624,7 +720,7 @@
                     <div class="avatar">${chat.initials}</div>
                     <div class="chat-info">
                         <div class="chat-top">
-                            <span class="chat-name">${chat.name}</span>
+                            <span class="chat-name">${chat.name}${getVerifiedBadgeHtml(chat.handle)}</span>
                             <span class="chat-time">${lastMsg ? lastMsg.time : ''}</span>
                         </div>
                         <div class="chat-bottom">
@@ -644,10 +740,10 @@
             const chat = appState.chats.find(c => c.id === id);
             if (!chat) return;
             chat.unread = 0;
-            document.getElementById('activeChatName').textContent = chat.name;
+            document.getElementById('activeChatName').innerHTML = chat.name + getVerifiedBadgeHtml(chat.handle);
             document.getElementById('activeChatAvatar').textContent = chat.initials;
             document.getElementById('activeChatSubtitle').innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
-            document.getElementById('modalContactName').textContent = chat.name;
+            document.getElementById('modalContactName').innerHTML = chat.name + getVerifiedBadgeHtml(chat.handle);
             document.getElementById('modalContactAvatar').textContent = chat.initials;
             document.getElementById('modalContactHandle').textContent = `${chat.handle || '@user'} • в сети`;
             document.getElementById('modalContactBio').textContent = chat.bio || 'Пользователь мессенджера DOCX';
@@ -726,7 +822,7 @@
 
         function bootApp() {
             applyAppearance();
-            document.getElementById('myName').textContent = appState.user.name;
+            document.getElementById('myName').innerHTML = appState.user.name + getVerifiedBadgeHtml(appState.user.phone);
             document.getElementById('myPhone').textContent = appState.user.phone;
             document.getElementById('editNameInput').value = appState.user.name;
             document.getElementById('editPhoneInput').value = appState.user.phone;
@@ -742,7 +838,7 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений и поиск через Pusher Channels (порт 443, без CDN) -->
+    <!-- Мгновенная доставка сообщений и поиск через Pusher Channels (порт 443, без CORS) -->
     <script>
         const PUSHER_APP_ID = "2213934";
         const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
@@ -751,7 +847,7 @@
         const PUSHER_CLUSTER = "ap3";
 
         const PUSHER_SECRET = PUSHER_SECRET_PART1 + PUSHER_SECRET_PART2;
-         const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
+        const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
         const S = String.fromCharCode(47);
         const PUSHER_WS_URL = "wss:" + S + S + "ws-" + PUSHER_CLUSTER + ".pusher.com:443" + S + "app" + S + PUSHER_KEY + "?protocol=7&client=js&version=8.4.0&flash=false";
 
@@ -768,46 +864,6 @@
                 ? 'DOCX <span style="color:#10b981;">●</span>'
                 : 'DOCX <span style="color:#f59e0b;">○</span>';
             badge.title = isOnline ? 'Pusher подключен (порт 443)' : 'Подключение к Pusher...';
-        }
-               function md5Hex(str) {
-            function cmn(q, a, b, x, s, t) {
-                a = (((a + q) | 0) + ((x + t) | 0)) | 0;
-                return (((a << s) | (a >>> (32 - s))) + b) | 0;
-            }
-            function ff(a, b, c, d, x, s, t) { return cmn((b & c) | ((~b) & d), a, b, x, s, t); }
-            function gg(a, b, c, d, x, s, t) { return cmn((b & d) | (c & (~d)), a, b, x, s, t); }
-            function hh(a, b, c, d, x, s, t) { return cmn(b ^ c ^ d, a, b, x, s, t); }
-            function ii(a, b, c, d, x, s, t) { return cmn(c ^ (b | (~d)), a, b, x, s, t); }
-            const bytes = textEnc.encode(str);
-            const n = bytes.length;
-            let s0 = 1732584193, s1 = -271733879, s2 = -1732584194, s3 = 271733878;
-            const words = new Int32Array((((n + 8) >> 6) + 1) * 16);
-            for (let i = 0; i < n; i++) words.set([words.at(i >> 2) | (bytes.at(i) << ((i % 4) * 8))], i >> 2);
-            words.set([words.at(n >> 2) | (0x80 << ((n % 4) * 8))], n >> 2);
-            words.set([n * 8], words.length - 2);
-            for (let i = 0; i < words.length; i += 16) {
-                let a = s0, b = s1, c = s2, d = s3;
-                const w = words.subarray(i, i + 16);
-                a=ff(a,b,c,d,w.at(0),7,-680876936);d=ff(d,a,b,c,w.at(1),12,-389564586);c=ff(c,d,a,b,w.at(2),17,606105819);b=ff(b,c,d,a,w.at(3),22,-1044525330);
-                a=ff(a,b,c,d,w.at(4),7,-176418897);d=ff(d,a,b,c,w.at(5),12,1200080426);c=ff(c,d,a,b,w.at(6),17,-1473231341);b=ff(b,c,d,a,w.at(7),22,-45705983);
-                a=ff(a,b,c,d,w.at(8),7,1770035416);d=ff(d,a,b,c,w.at(9),12,-1958414417);c=ff(c,d,a,b,w.at(10),17,-42063);b=ff(b,c,d,a,w.at(11),22,-1990404162);
-                a=ff(a,b,c,d,w.at(12),7,1804603682);d=ff(d,a,b,c,w.at(13),12,-40341101);c=ff(c,d,a,b,w.at(14),17,-1502002290);b=ff(b,c,d,a,w.at(15),22,1236535329);
-                a=gg(a,b,c,d,w.at(1),5,-165796510);d=gg(d,a,b,c,w.at(6),9,-1069501632);c=gg(c,d,a,b,w.at(11),14,643717713);b=gg(b,c,d,a,w.at(0),20,-373897302);
-                a=gg(a,b,c,d,w.at(5),5,-701558691);d=gg(d,a,b,c,w.at(10),9,38016083);c=gg(c,d,a,b,w.at(15),14,-660478335);b=gg(b,c,d,a,w.at(4),20,-405537848);
-                a=gg(a,b,c,d,w.at(9),5,568446438);d=gg(d,a,b,c,w.at(14),9,-1019803690);c=gg(c,d,a,b,w.at(3),14,-187363961);b=gg(b,c,d,a,w.at(8),20,1163531501);
-                a=gg(a,b,c,d,w.at(13),5,-1444681467);d=gg(d,a,b,c,w.at(2),9,-51403784);c=gg(c,d,a,b,w.at(7),14,1735328473);b=gg(b,c,d,a,w.at(12),20,-1926607734);
-                a=hh(a,b,c,d,w.at(5),4,-378558);d=hh(d,a,b,c,w.at(8),11,-2022574463);c=hh(c,d,a,b,w.at(11),16,1839030562);b=hh(b,c,d,a,w.at(14),23,-35309556);
-                a=hh(a,b,c,d,w.at(1),4,-1530992060);d=hh(d,a,b,c,w.at(4),11,1272893353);c=hh(c,d,a,b,w.at(7),16,-155497632);b=hh(b,c,d,a,w.at(10),23,-1094730640);
-                a=hh(a,b,c,d,w.at(13),4,681279174);d=hh(d,a,b,c,w.at(0),11,-358537222);c=hh(c,d,a,b,w.at(3),16,-722521979);b=hh(b,c,d,a,w.at(6),23,76029189);
-                a=hh(a,b,c,d,w.at(9),4,-640364487);d=hh(d,a,b,c,w.at(12),11,-421815835);c=hh(c,d,a,b,w.at(15),16,530742520);b=hh(b,c,d,a,w.at(2),23,-995338651);
-                a=ii(a,b,c,d,w.at(0),6,-198630844);d=ii(d,a,b,c,w.at(7),10,1126891415);c=ii(c,d,a,b,w.at(14),15,-1416354905);b=ii(b,c,d,a,w.at(5),21,-57434055);
-                a=ii(a,b,c,d,w.at(12),6,1700485571);d=ii(d,a,b,c,w.at(3),10,-1894986606);c=ii(c,d,a,b,w.at(10),15,-1051523);b=ii(b,c,d,a,w.at(1),21,-2054922799);
-                a=ii(a,b,c,d,w.at(8),6,1873313359);d=ii(d,a,b,c,w.at(15),10,-30611744);c=ii(c,d,a,b,w.at(6),15,-1560198380);b=ii(b,c,d,a,w.at(13),21,1309151649);
-                a=ii(a,b,c,d,w.at(4),6,-145523070);d=ii(d,a,b,c,w.at(11),10,-1120210379);c=ii(c,d,a,b,w.at(2),15,718787259);b=ii(b,c,d,a,w.at(9),21,-343485551);
-                s0=(s0+a)|0; s1=(s1+b)|0; s2=(s2+c)|0; s3=(s3+d)|0;
-            }
-            const res = new Uint8Array(new Int32Array([s0, s1, s2, s3]).buffer);
-            return Array.from(res).map(b => b.toString(16).padStart(2, '0')).join('');
         }
 
         async function hmacSha256Hex(secret, message) {
@@ -857,9 +913,10 @@
                 if (chat) {
                     if (chat.messages.some(m => m.msgId === data.msgId)) return;
 
+                    const badge = getVerifiedBadgeHtml(data.senderPhone);
                     chat.messages.push({
                         msgId: data.msgId,
-                        text: `<b>${data.senderName}:</b> ${data.text || ""}`,
+                        text: `<b>${data.senderName}${badge}:</b> ${data.text || ""}`,
                         image: data.image || null,
                         type: "in",
                         time: data.timeStr || ""
@@ -877,7 +934,7 @@
                 }
             }
         }
-               function publishToPusher(eventName, payloadObj) {
+        function publishToPusher(eventName, payloadObj) {
             if (!pusherConnected || !pusherSocket || pusherSocket.readyState !== WebSocket.OPEN) {
                 return;
             }
@@ -957,7 +1014,6 @@
             onlineUsersMap[cleanPhone] = profileData;
             publishToPusher("docx-event", { type: "PROFILE", user: profileData });
         };
-
         window.searchCloudUsers = function() {
             const container = document.getElementById('userSearchResults');
             const qText = document.getElementById('userSearchQuery').value.toLowerCase().trim();
@@ -973,6 +1029,7 @@
                 ((u.name && u.name.toLowerCase().includes(qText)) ||
                  (u.phone && u.phone.toLowerCase().includes(qText)))
             );
+
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
@@ -997,7 +1054,7 @@
                 card.innerHTML = `
                     <div class="avatar">${badge}</div>
                     <div style="flex:1; min-width:0;">
-                        <div style="font-weight:700; font-size:0.95rem;">${u.name}</div>
+                        <div style="font-weight:700; font-size:0.95rem;">${u.name}${getVerifiedBadgeHtml(u.phone)}</div>
                         <div style="font-size:0.8rem; color:var(--accent);">${u.phone}</div>
                     </div>
                     <div style="font-size:0.8rem; color:var(--muted);">Написать →</div>
@@ -1046,6 +1103,7 @@
                 reader.readAsDataURL(file);
             });
         }
+
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
             if (!file) return;
