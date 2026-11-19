@@ -493,8 +493,8 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v29';
-        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v6';
+        const STORAGE_KEY = 'docx_messenger_state_v30';
+        const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
         const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
 
@@ -619,6 +619,10 @@
                 };
                 accountsDb[cleanKey] = newAccount;
                 saveAccountsDb();
+
+                if (typeof publishToPusher === 'function') {
+                    publishToPusher("docx-event", { type: "ACCOUNT_SYNC", accounts: { [cleanKey]: newAccount } });
+                }
 
                 appState.user = {
                     name: newAccount.name,
@@ -1091,7 +1095,7 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений, реакций и групп через Pusher Channels (порт 443, без CORS) -->
+    <!-- Мгновенная доставка сообщений, синхронизация аккаунтов, реакций и групп через Pusher Channels -->
     <script>
         const PUSHER_APP_ID = "2213934";
         const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
@@ -1127,6 +1131,25 @@
         function handlePusherPacket(packet) {
             if (!packet || !packet.type) return;
             const myPhone = (appState.user.phone || "").toLowerCase().trim();
+
+            if (packet.type === "REQUEST_ACCOUNTS") {
+                if (Object.keys(accountsDb).length > 0) {
+                    publishToPusher("docx-event", { type: "ACCOUNT_SYNC", accounts: accountsDb });
+                }
+                return;
+            }
+
+            if (packet.type === "ACCOUNT_SYNC" && packet.accounts) {
+                let updated = false;
+                Object.entries(packet.accounts).forEach(([key, acc]) => {
+                    if (key && acc && !accountsDb[key]) {
+                        accountsDb[key] = acc;
+                        updated = true;
+                    }
+                });
+                if (updated) saveAccountsDb();
+                return;
+            }
 
             if (packet.type === "WHO_IS_ONLINE") {
                 window.syncUserToCloud();
@@ -1272,6 +1295,10 @@
                     if (frame.event === "pusher_internal:subscription_succeeded") {
                         window.syncUserToCloud();
                         publishToPusher("docx-event", { type: "WHO_IS_ONLINE" });
+                        publishToPusher("docx-event", { type: "REQUEST_ACCOUNTS" });
+                        if (Object.keys(accountsDb).length > 0) {
+                            publishToPusher("docx-event", { type: "ACCOUNT_SYNC", accounts: accountsDb });
+                        }
                     }
                     if (frame.event === "pusher:ping") {
                         pusherSocket.send(JSON.stringify({ event: "pusher:pong", data: {} }));
@@ -1428,6 +1455,7 @@
                     initPusherRealtime();
                 } else {
                     window.syncUserToCloud();
+                    publishToPusher("docx-event", { type: "REQUEST_ACCOUNTS" });
                 }
             }
         });
