@@ -123,8 +123,8 @@
         .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
         .chat-list { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
-        .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
-        .chat-item:hover { background: rgba(255,255,255,0.05); }
+        .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; cursor: pointer; transition: transform 0.2s, background 0.2s, border-color 0.2s; border: 1px solid transparent; }
+        .chat-item:hover { background: rgba(255,255,255,0.05); transform: translateX(4px); }
         .chat-item.active { background: rgba(255,255,255,0.08); border-color: var(--border); }
         .chat-info { flex: 1; min-width: 0; }
         .chat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
@@ -137,12 +137,12 @@
         .chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
         .mobile-back-btn { display: none; font-weight: 700; font-size: 1.25rem; }
         .chat-header-info { display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; }
-        .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; }
+        .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; animation: pulseOnline 2.2s infinite; }
         .typing-text { color: var(--accent); font-style: italic; font-weight: 600; }
         .chat-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
         .messages-box { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; }
+        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; animation: msgPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .msg:active { transform: scale(0.98); }
         .msg.in { align-self: flex-start; background: var(--msg-in); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
         .msg.out { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 6px; }
@@ -210,7 +210,8 @@
         .theme-card:hover, .theme-card.active { border-color: var(--accent); background: rgba(255,255,255,0.08); color: var(--accent); }
 
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
-        .modal-card { background: var(--glass); border: 1px solid var(--border); border-radius: 26px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); }
+        .modal-card { background: var(--glass); border: 1px solid var(--border); border-radius: 26px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); animation: modalZoomIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .auth-card { animation: modalZoomIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-header h3 { font-size: 1.2rem; }
         .close-modal { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; }
@@ -218,6 +219,20 @@
         .user-search-results { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
         .found-user-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); cursor: pointer; transition: 0.2s; }
         .found-user-card:hover { border-color: var(--accent); background: rgba(255,255,255,0.1); }
+        .icon-btn:active, .send-btn:active, .auth-btn:active { transform: scale(0.93); }
+
+        @keyframes msgPopIn {
+            0% { opacity: 0; transform: translateY(12px) scale(0.95); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes modalZoomIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes pulseOnline {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+            50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+        }
 
         @media (max-width: 768px) {
             .main-workspace { padding: 0; gap: 0; }
@@ -399,6 +414,11 @@
                     </div>
                 </div>
                 <div class="settings-section">
+                    <h3>Системные уведомления</h3>
+                    <button type="button" class="auth-btn" id="enablePushBtn" style="margin-top:0;" onclick="requestBrowserNotifications()">🔔 Включить Push-уведомления</button>
+                </div>
+
+                <div class="settings-section">
                     <h3>Режим интерфейса</h3>
                     <div style="display: flex; gap: 10px;">
                         <button type="button" class="theme-card" style="flex:1" onclick="setLayout(false)">Округлые карточки</button>
@@ -473,8 +493,8 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v28';
-        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v5';
+        const STORAGE_KEY = 'docx_messenger_state_v29';
+        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v6';
         const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
 
@@ -628,6 +648,10 @@
             saveState();
             bootApp();
 
+            if ("Notification" in window && Notification.permission === "default") {
+                Notification.requestPermission();
+            }
+
             if (window.syncUserToCloud) {
                 window.syncUserToCloud();
             }
@@ -662,6 +686,39 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
             } catch (e) {}
+        }
+
+        function requestBrowserNotifications() {
+            if (!("Notification" in window)) {
+                alert("Ваш браузер не поддерживает системные Push-уведомления.");
+                return;
+            }
+            Notification.requestPermission().then((perm) => {
+                const btn = document.getElementById('enablePushBtn');
+                if (perm === "granted") {
+                    if (btn) btn.textContent = "✅ Push-уведомления включены";
+                    new Notification("DOCX // Уведомления активны", {
+                        body: "Теперь вы будете получать уведомления, даже если вкладка свёрнута!"
+                    });
+                } else {
+                    alert("Разрешение на уведомления отклонено в настройках браузера.");
+                }
+            });
+        }
+
+        function showSystemPushNotification(senderName, textContent, chatId) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            if (document.visibilityState === "visible" && appState.activeChatId === chatId) return;
+
+            const cleanBody = textContent ? textContent.replace(/<[^>]*>/g, '') : "📷 Отправлено изображение";
+            const notif = new Notification(`DOCX • ${senderName}`, {
+                body: cleanBody
+            });
+            notif.onclick = () => {
+                window.focus();
+                if (chatId) selectChat(chatId, true);
+                notif.close();
+            };
         }
 
         function notifyTyping() {
@@ -838,6 +895,10 @@
         function openSettings() {
             document.getElementById('chatWorkspace').style.display = 'none';
             document.getElementById('settingsWorkspace').style.display = 'block';
+            const btn = document.getElementById('enablePushBtn');
+            if (btn && "Notification" in window && Notification.permission === "granted") {
+                btn.textContent = "✅ Push-уведомления включены";
+            }
         }
         function closeSettings() {
             document.getElementById('settingsWorkspace').style.display = 'none';
@@ -1165,6 +1226,7 @@
                     }
                     renderChatList();
                     playNotificationSound();
+                    showSystemPushNotification(data.senderName, data.text, chat.id);
                 }
             }
         }
