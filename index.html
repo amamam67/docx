@@ -232,7 +232,7 @@
                             <div class="user-meta-phone" id="myPhone">@kirill_chukotka</div>
                         </div>
                     </div>
-                    <div class="docx-badge">DOCX</div>
+                    <div class="docx-badge">DOCX <span style="color:#f59e0b;">○</span></div>
                 </div>
 
                 <div class="sidebar-controls">
@@ -400,7 +400,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v16';
+        const STORAGE_KEY = 'docx_messenger_state_v20';
         let isRegisterMode = false;
 
         const defaultChats = [
@@ -742,14 +742,21 @@
 
         bootApp();
     </script>
-           <!-- Рабочий WebSocket-канал через broker.emqx.io (проверен в РФ без VPN) -->
+    <!-- Автономный WebSocket MQTT клиент (с автопробуждением и индикатором сети) -->
     <script>
         const S = String.fromCharCode(47);
-        const BROKER_URL = "wss:" + S + S + "broker.emqx.io:8084" + S + "mqtt";
+              const BROKERS = [
+            new URL("/mqtt", "wss://broker.emqx.io:8084").href,
+            new URL("/mqtt", "wss://://hivemq.com").href,
+            new URL("/mqtt", "wss://test.mosquitto.org:8081").href
+        ];
+
         const APP_PREFIX = "docx_messenger_ru_2026_v2";
         let wsClient = null;
         let wsConnected = false;
+        let brokerIndex = 0;
         let onlineUsersMap = {};
+        let outboundQueue = [];
         let packetIdCounter = 1;
         const textEnc = new TextEncoder();
         const textDec = new TextDecoder();
@@ -803,8 +810,24 @@
             const body = concatBytes([tBytes, mBytes]);
             return concatBytes([new Uint8Array([headerByte]), encodeRemainingLength(body.length), body]);
         }
+        function updateConnectionBadge(isOnline) {
+            const badge = document.querySelector('.docx-badge');
+            if (!badge) return;
+            badge.innerHTML = isOnline
+                ? 'DOCX <span style="color:#10b981;">●</span>'
+                : 'DOCX <span style="color:#f59e0b;">○</span>';
+            badge.title = isOnline ? 'Облако подключено' : 'Переподключение...';
+        }
 
-                function parseIncomingPackets(buf) {
+        function flushOutboundQueue() {
+            if (!wsConnected || !wsClient || wsClient.readyState !== WebSocket.OPEN) return;
+            while (outboundQueue.length > 0) {
+                const item = outboundQueue.shift();
+                wsClient.send(buildPublishPacket(item.topic, item.payloadStr, item.retain));
+            }
+        }
+
+        function parseIncomingPackets(buf) {
             let i = 0;
             while (i < buf.length) {
                 const header = buf.at(i);
@@ -825,10 +848,11 @@
 
                 if (type === 2) {
                     wsConnected = true;
-                    console.log("DOCX Облако подключено (EMQX WebSocket)");
+                    updateConnectionBadge(true);
                     wsClient.send(buildSubscribePacket(APP_PREFIX + S + "presence" + S + "#"));
                     wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
                     window.syncUserToCloud();
+                    flushOutboundQueue();
                 } else if (type === 3) {
                     const tLen = (packetBody.at(0) << 8) | packetBody.at(1);
                     const topic = textDec.decode(packetBody.slice(2, 2 + tLen));
@@ -839,7 +863,6 @@
                 }
             }
         }
-
         function handleCloudMessage(topic, rawPayload) {
             try {
                 const data = JSON.parse(rawPayload);
@@ -903,19 +926,15 @@
                 console.warn("Ошибка разбора пакета:", e);
             }
         }
-        let outboundQueue = [];
-
-        function flushOutboundQueue() {
-            if (!wsConnected || !wsClient || wsClient.readyState !== WebSocket.OPEN) return;
-            while (outboundQueue.length > 0) {
-                const item = outboundQueue.shift();
-                wsClient.send(buildPublishPacket(item.topic, item.payloadStr, item.retain));
-            }
-        }
-
         function initBuiltInCloud() {
+            if (wsClient && (wsClient.readyState === WebSocket.OPEN || wsClient.readyState === WebSocket.CONNECTING)) {
+                return;
+            }
             wsConnected = false;
-            wsClient = new WebSocket(BROKER_URL, "mqtt");
+            updateConnectionBadge(false);
+
+            const currentUrl = BROKERS[brokerIndex % BROKERS.length];
+            wsClient = new WebSocket(currentUrl, "mqtt");
             wsClient.binaryType = "arraybuffer";
 
             wsClient.onopen = () => {
@@ -925,20 +944,35 @@
 
             wsClient.onmessage = (event) => {
                 parseIncomingPackets(new Uint8Array(event.data));
-                if (wsConnected) {
-                    flushOutboundQueue();
-                }
             };
 
             wsClient.onerror = () => {
                 wsConnected = false;
+                updateConnectionBadge(false);
             };
 
             wsClient.onclose = () => {
                 wsConnected = false;
-                setTimeout(initBuiltInCloud, 1000);
+                updateConnectionBadge(false);
+                brokerIndex++;
+                setTimeout(initBuiltInCloud, 1500);
             };
         }
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                if (!wsClient || wsClient.readyState !== WebSocket.OPEN) {
+                    initBuiltInCloud();
+                } else {
+                    wsClient.send(new Uint8Array([0xc0, 0x00]));
+                    if (appState.isLoggedIn) window.syncUserToCloud();
+                }
+            }
+        });
+
+        window.addEventListener("online", () => {
+            initBuiltInCloud();
+        });
 
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
@@ -1010,7 +1044,6 @@
                 container.appendChild(card);
             });
         };
-
         window.subscribeToCloudChat = function() {
             if (wsConnected && wsClient && wsClient.readyState === WebSocket.OPEN) {
                 wsClient.send(buildSubscribePacket(APP_PREFIX + S + "global_bus"));
@@ -1090,5 +1123,3 @@
     </script>
 </body>
 </html>
-
-        
