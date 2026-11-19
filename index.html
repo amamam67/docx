@@ -116,10 +116,10 @@
         }
         .docx-badge { font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); border: 1px solid var(--border); padding: 4px 10px; border-radius: 10px; letter-spacing: 1px; }
 
-        .sidebar-controls { padding: 12px 14px; display: flex; gap: 8px; }
-        .search-input { flex: 1; padding: 10px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 16px; outline: none; min-width: 0; }
+        .sidebar-controls { padding: 12px 14px; display: flex; gap: 6px; }
+        .search-input { flex: 1; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 15px; outline: none; min-width: 0; }
         .search-input:focus { border-color: var(--accent); }
-        .icon-btn { width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; transition: 0.2s; flex-shrink: 0; }
+        .icon-btn { width: 40px; height: 40px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: 0.2s; flex-shrink: 0; }
         .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
         .chat-list { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -138,15 +138,38 @@
         .mobile-back-btn { display: none; font-weight: 700; font-size: 1.25rem; }
         .chat-header-info { display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; }
         .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; }
+        .typing-text { color: var(--accent); font-style: italic; font-weight: 600; }
         .chat-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
         .messages-box { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; }
+        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; }
+        .msg:active { transform: scale(0.98); }
         .msg.in { align-self: flex-start; background: var(--msg-in); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
         .msg.out { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 6px; }
         .msg-img { max-width: 100%; max-height: 240px; border-radius: 14px; margin-bottom: 6px; display: block; object-fit: cover; }
         .msg-meta { font-size: 0.68rem; opacity: 0.75; text-align: right; margin-top: 4px; }
 
+        .reply-quote {
+            border-left: 3px solid var(--accent); background: rgba(0, 0, 0, 0.22);
+            padding: 5px 9px; border-radius: 8px; margin-bottom: 6px;
+            font-size: 0.8rem; opacity: 0.92;
+        }
+        .msg-reactions { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+        .reaction-pill {
+            background: rgba(255, 255, 255, 0.14); border: 1px solid var(--border);
+            border-radius: 10px; padding: 2px 7px; font-size: 0.75rem;
+        }
+        .reply-banner {
+            display: none; padding: 8px 14px; background: var(--input-bg);
+            border-top: 1px solid var(--border); align-items: center;
+            justify-content: space-between; font-size: 0.82rem; color: var(--muted);
+        }
+        .msg-action-bar {
+            position: fixed; bottom: 82px; left: 50%; transform: translateX(-50%);
+            background: var(--glass); backdrop-filter: blur(24px); border: 1px solid var(--border);
+            border-radius: 20px; padding: 8px 12px; display: none; align-items: center;
+            gap: 6px; box-shadow: 0 12px 35px rgba(0,0,0,0.5); z-index: 150; flex-wrap: wrap; max-width: 94vw;
+        }
         .chat-input-bar { padding: 10px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 8px; position: relative; background: var(--glass); }
         .msg-input { flex: 1; padding: 12px 15px; border-radius: 18px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 16px; outline: none; min-width: 0; }
         .msg-input:focus { border-color: var(--accent); }
@@ -176,7 +199,7 @@
         .avatar-preview-lg { width: 72px; height: 72px; border-radius: 22px; font-size: 1.8rem; border: 2px solid var(--accent); }
         .avatar-actions { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
         .avatar-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-        .small-btn { padding: 8px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--glass); color: var(--text); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .small-btn { padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--glass); color: var(--text); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .small-btn:hover { border-color: var(--accent); color: var(--accent); }
         .emoji-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
         .emoji-opt { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
@@ -219,7 +242,7 @@
             <div id="authBox">
                 <input type="text" class="auth-input" id="regName" placeholder="Ваше имя (например: Кирилл)" style="display: none;">
                 <input type="text" class="auth-input" id="authPhone" placeholder="@username или телефон" value="opgk1rill!">
-                <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="">
+                <input type="password" class="auth-input" id="authPass" placeholder="Пароль" value="123456">
                 <button type="button" class="auth-btn" id="authSubmitBtn" onclick="handleLoginSubmit()">Войти в DOCX</button>
             </div>
             <div class="auth-switch" id="authSwitchBtn" onclick="toggleAuthMode()">
@@ -244,7 +267,8 @@
 
                 <div class="sidebar-controls">
                     <input type="text" class="search-input" id="searchInput" placeholder="Поиск чатов..." oninput="filterChats()">
-                    <button type="button" class="icon-btn" onclick="openUserSearchModal()" title="Найти человека по @username или телефону">🔍</button>
+                    <button type="button" class="icon-btn" onclick="openUserSearchModal()" title="Найти человека">🔍</button>
+                    <button type="button" class="icon-btn" onclick="openModal('createGroupModal')" title="Создать группу или канал">➕</button>
                     <button type="button" class="icon-btn" onclick="openSettings()" title="Настройки">⚙</button>
                 </div>
 
@@ -271,6 +295,16 @@
 
                 <div class="messages-box" id="messagesBox"></div>
 
+                <div class="msg-action-bar" id="msgActionBar">
+                    <button type="button" class="emoji-opt" onclick="applyReaction('❤️')">❤️</button>
+                    <button type="button" class="emoji-opt" onclick="applyReaction('👍')">👍</button>
+                    <button type="button" class="emoji-opt" onclick="applyReaction('🔥')">🔥</button>
+                    <button type="button" class="emoji-opt" onclick="applyReaction('😂')">😂</button>
+                    <button type="button" class="emoji-opt" onclick="applyReaction('😮')">😮</button>
+                    <button type="button" class="small-btn" onclick="startReplyToSelected()">↩ Ответить</button>
+                    <button type="button" class="small-btn" onclick="closeMsgActionBar()">✕</button>
+                </div>
+
                 <div class="chat-emoji-popover" id="chatEmojiPopover">
                     <button type="button" class="emoji-opt" onclick="insertChatEmoji('😀')">😀</button>
                     <button type="button" class="emoji-opt" onclick="insertChatEmoji('😂')">😂</button>
@@ -284,13 +318,18 @@
                     <button type="button" class="emoji-opt" onclick="insertChatEmoji('💡')">💡</button>
                 </div>
 
-                <div class="chat-input-bar">
+                <div class="reply-banner" id="replyBanner">
+                    <span id="replyBannerText" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ответ на сообщение...</span>
+                    <button type="button" class="close-modal" style="font-size: 1rem; margin-left: 10px;" onclick="cancelReply()">✕</button>
+                </div>
+
+                <div class="chat-input-bar" id="chatInputBar">
                     <label class="icon-btn" title="Отправить картинку" style="cursor: pointer;">
                         📎
                         <input type="file" id="chatImageInput" accept="image/*" style="display: none;" onchange="handleSendImage(event)">
                     </label>
                     <button type="button" class="icon-btn" title="Эмодзи" onclick="toggleChatEmoji()">😊</button>
-                    <input type="text" class="msg-input" id="messageInput" placeholder="Сообщение..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
+                    <input type="text" class="msg-input" id="messageInput" placeholder="Сообщение..." autocomplete="off" oninput="notifyTyping()" onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
                     <button type="button" class="send-btn" onclick="sendTextMessage()">➤</button>
                 </div>
             </main>
@@ -391,6 +430,33 @@
         </div>
     </div>
 
+    <div class="modal-backdrop" id="createGroupModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Создать группу или канал</h3>
+                <button type="button" class="close-modal" onclick="closeModal('createGroupModal')">✕</button>
+            </div>
+            <div>
+                <div class="form-group">
+                    <label class="form-label">Тип сообщества</label>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="theme-card active" id="typeGroupBtn" style="flex:1" onclick="selectRoomType('group')">👥 Группа</button>
+                        <button type="button" class="theme-card" id="typeChannelBtn" style="flex:1" onclick="selectRoomType('channel')">📢 Канал</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Название группы или канала</label>
+                    <input type="text" class="auth-input" id="newGroupName" placeholder="Например: Новости DOCX">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Описание</label>
+                    <input type="text" class="auth-input" id="newGroupBio" placeholder="О чём этот чат...">
+                </div>
+                <button type="button" class="auth-btn" onclick="createGroupOrChannel()">Создать и открыть</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-backdrop" id="profileModal">
         <div class="modal-card" style="text-align: center;">
             <div class="modal-header">
@@ -407,8 +473,8 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v25';
-        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v2';
+        const STORAGE_KEY = 'docx_messenger_state_v26';
+        const ACCOUNTS_DB_KEY = 'docx_registered_accounts_v3';
         const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
 
@@ -431,7 +497,7 @@
         if (!accountsDb['opgk1rill!']) {
             accountsDb['opgk1rill!'] = {
                 phone: 'opgk1rill!',
-                pass: 'kirill_12_tv',
+                pass: '123456',
                 name: 'Кирилл',
                 bio: 'Создатель мессенджера DOCX',
                 avatar: { type: 'initials', value: 'КИ' }
@@ -455,7 +521,7 @@
                 initials: "🌐",
                 unread: 0,
                 messages: [
-                    { text: "Добро пожаловать! Нажмите 🔍 в меню, чтобы найти друзей по @username или телефону.", type: "in", time: "12:00" }
+                    { text: "Добро пожаловать! Нажмите на любое сообщение, чтобы ответить или поставить реакцию.", type: "in", time: "12:00" }
                 ]
             }
         ];
@@ -586,6 +652,125 @@
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('authScreen').style.display = 'flex';
         }
+        let activeReplyData = null;
+        let selectedMsgIndex = null;
+        let newRoomType = 'group';
+        let typingTimer = null;
+        let lastTypingSentAt = 0;
+
+        function playNotificationSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch (e) {}
+        }
+
+        function notifyTyping() {
+            const now = Date.now();
+            if (now - lastTypingSentAt < 2000) return;
+            lastTypingSentAt = now;
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || typeof publishToPusher !== 'function') return;
+            publishToPusher("docx-event", {
+                type: "TYPING",
+                roomId: (chat.roomId || chat.name).toLowerCase().trim(),
+                senderName: appState.user.name,
+                senderPhone: appState.user.phone
+            });
+        }
+
+        function selectRoomType(type) {
+            newRoomType = type;
+            document.getElementById('typeGroupBtn').classList.toggle('active', type === 'group');
+            document.getElementById('typeChannelBtn').classList.toggle('active', type === 'channel');
+        }
+
+        function createGroupOrChannel() {
+            const name = document.getElementById('newGroupName').value.trim();
+            const bio = document.getElementById('newGroupBio').value.trim();
+            if (!name) return;
+
+            const roomCode = (newRoomType === 'channel' ? 'ch_' : 'grp_') + Date.now().toString(36);
+            const newChat = {
+                id: roomCode,
+                roomId: roomCode,
+                isChannel: newRoomType === 'channel',
+                ownerPhone: appState.user.phone.toLowerCase().trim(),
+                name: name,
+                handle: (newRoomType === 'channel' ? '📢 Канал' : '👥 Группа'),
+                bio: bio || (newRoomType === 'channel' ? 'Публичный канал DOCX' : 'Групповой чат DOCX'),
+                initials: newRoomType === 'channel' ? '📢' : '👥',
+                unread: 0,
+                messages: [
+                    { text: `${newRoomType === 'channel' ? 'Канал' : 'Группа'} «${name}» создана!`, type: 'in', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                ]
+            };
+
+            appState.chats.unshift(newChat);
+            saveState();
+            closeModal('createGroupModal');
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupBio').value = '';
+            selectChat(newChat.id, true);
+
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", { type: "ROOM_CREATED", room: newChat });
+            }
+        }
+        function openMsgActionBar(index) {
+            selectedMsgIndex = index;
+            document.getElementById('msgActionBar').style.display = 'flex';
+        }
+        function closeMsgActionBar() {
+            selectedMsgIndex = null;
+            document.getElementById('msgActionBar').style.display = 'none';
+        }
+        function startReplyToSelected() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || selectedMsgIndex === null) return;
+            const targetMsg = chat.messages.at(selectedMsgIndex);
+            if (!targetMsg) return;
+            const cleanText = targetMsg.text ? targetMsg.text.replace(/<[^>]*>/g, '') : '📷 Изображение';
+            activeReplyData = cleanText.slice(0, 60);
+            document.getElementById('replyBannerText').textContent = '↩ ' + activeReplyData;
+            document.getElementById('replyBanner').style.display = 'flex';
+            closeMsgActionBar();
+            document.getElementById('messageInput').focus();
+        }
+        function cancelReply() {
+            activeReplyData = null;
+            document.getElementById('replyBanner').style.display = 'none';
+        }
+        function applyReaction(emoji) {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || selectedMsgIndex === null) return;
+            const targetMsg = chat.messages.at(selectedMsgIndex);
+            if (!targetMsg) return;
+            if (!targetMsg.reactions) targetMsg.reactions = [];
+            if (!targetMsg.reactions.includes(emoji)) targetMsg.reactions.push(emoji);
+            saveState();
+            renderMessages();
+            if (targetMsg.msgId && typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", {
+                    type: "REACTION",
+                    roomId: (chat.roomId || chat.name).toLowerCase().trim(),
+                    msgId: targetMsg.msgId,
+                    emoji: emoji
+                });
+            }
+            closeMsgActionBar();
+        }
+
         function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -595,20 +780,23 @@
             if (!activeChat) return;
 
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
+            const quote = activeReplyData;
+
             input.value = '';
+            cancelReply();
             document.getElementById('chatEmojiPopover').style.display = 'none';
 
-            activeChat.messages.push({ text, type: 'out', time: now });
+            activeChat.messages.push({ msgId, text, replyTo: quote, reactions: [], type: 'out', time: now });
             saveState();
             renderMessages();
             renderChatList();
 
             if (window.sendCloudPayload) {
                 const targetRoom = activeChat.roomId || activeChat.name;
-                window.sendCloudPayload(targetRoom, text, null);
+                window.sendCloudPayload(targetRoom, text, null, msgId, quote);
             }
         }
-
         function updateMyAvatarUI() {
             const targets = [
                 document.getElementById('myAvatar'),
@@ -657,6 +845,7 @@
             saveState();
             if (window.syncUserToCloud) window.syncUserToCloud();
         }
+
         function openSettings() {
             document.getElementById('chatWorkspace').style.display = 'none';
             document.getElementById('settingsWorkspace').style.display = 'block';
@@ -682,7 +871,6 @@
             applyAppearance();
             saveState();
         }
-
         function saveProfileChanges() {
             const newName = document.getElementById('editNameInput').value.trim();
             const newPhone = document.getElementById('editPhoneInput').value.trim();
@@ -740,6 +928,9 @@
             const chat = appState.chats.find(c => c.id === id);
             if (!chat) return;
             chat.unread = 0;
+            cancelReply();
+            closeMsgActionBar();
+
             document.getElementById('activeChatName').innerHTML = chat.name + getVerifiedBadgeHtml(chat.handle);
             document.getElementById('activeChatAvatar').textContent = chat.initials;
             document.getElementById('activeChatSubtitle').innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
@@ -747,6 +938,12 @@
             document.getElementById('modalContactAvatar').textContent = chat.initials;
             document.getElementById('modalContactHandle').textContent = `${chat.handle || '@user'} • в сети`;
             document.getElementById('modalContactBio').textContent = chat.bio || 'Пользователь мессенджера DOCX';
+
+            const inputBar = document.getElementById('chatInputBar');
+            if (inputBar) {
+                const isReadOnlyChannel = chat.isChannel && chat.ownerPhone !== appState.user.phone.toLowerCase().trim();
+                inputBar.style.display = isReadOnlyChannel ? 'none' : 'flex';
+            }
 
             if (openOnMobile) {
                 document.body.classList.add('mobile-chat-open');
@@ -759,21 +956,26 @@
                 window.subscribeToCloudChat(chat.roomId || chat.name);
             }
         }
-
         function closeMobileChat() {
             document.body.classList.remove('mobile-chat-open');
         }
+
         function renderMessages() {
             const box = document.getElementById('messagesBox');
             const chat = appState.chats.find(c => c.id === appState.activeChatId);
             if (!chat) return;
             box.innerHTML = '';
-            chat.messages.forEach(m => {
+            chat.messages.forEach((m, idx) => {
                 const div = document.createElement('div');
                 div.className = `msg ${m.type}`;
+                div.onclick = () => openMsgActionBar(idx);
+                const quoteHtml = m.replyTo ? `<div class="reply-quote">${m.replyTo}</div>` : '';
                 const imgHtml = m.image ? `<img src="${m.image}" class="msg-img" alt="Фото">` : '';
                 const textHtml = m.text ? `<div>${m.text}</div>` : '';
-                div.innerHTML = `${imgHtml}${textHtml}<div class="msg-meta">${m.time}</div>`;
+                const reactHtml = (m.reactions && m.reactions.length > 0)
+                    ? `<div class="msg-reactions">${m.reactions.map(r => `<span class="reaction-pill">${r}</span>`).join('')}</div>`
+                    : '';
+                div.innerHTML = `${quoteHtml}${imgHtml}${textHtml}${reactHtml}<div class="msg-meta">${m.time}</div>`;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
@@ -790,7 +992,6 @@
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
         function openUserSearchModal() {
             openModal('newChatModal');
             document.getElementById('userSearchQuery').value = '';
@@ -838,7 +1039,7 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений и поиск через Pusher Channels (порт 443, без CORS) -->
+    <!-- Мгновенная доставка сообщений, реакций и групп через Pusher Channels (порт 443, без CORS) -->
     <script>
         const PUSHER_APP_ID = "2213934";
         const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
@@ -850,7 +1051,6 @@
         const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
         const S = String.fromCharCode(47);
         const PUSHER_WS_URL = "wss:" + S + S + "ws-" + PUSHER_CLUSTER + ".pusher.com:443" + S + "app" + S + PUSHER_KEY + "?protocol=7&client=js&version=8.4.0&flash=false";
-
         let pusherSocket = null;
         let pusherConnected = false;
         let pusherSocketId = null;
@@ -886,6 +1086,43 @@
                 return;
             }
 
+            if (packet.type === "TYPING") {
+                if ((packet.senderPhone || "").toLowerCase().trim() === myPhone) return;
+                const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+                if (activeChat && (activeChat.roomId || activeChat.name).toLowerCase().trim() === packet.roomId) {
+                    const sub = document.getElementById('activeChatSubtitle');
+                    sub.innerHTML = `<span class="typing-text">✍️ ${packet.senderName} печатает...</span>`;
+                    clearTimeout(typingTimer);
+                    typingTimer = setTimeout(() => {
+                        sub.innerHTML = `<span class="status-dot"></span>${activeChat.handle || 'в сети'}`;
+                    }, 2500);
+                }
+                return;
+            }
+            if (packet.type === "ROOM_CREATED" && packet.room) {
+                if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
+                    appState.chats.unshift(packet.room);
+                    saveState();
+                    renderChatList();
+                }
+                return;
+            }
+
+            if (packet.type === "REACTION") {
+                const chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === packet.roomId);
+                if (chat) {
+                    const msg = chat.messages.find(m => m.msgId === packet.msgId);
+                    if (msg) {
+                        if (!msg.reactions) msg.reactions = [];
+                        if (!msg.reactions.includes(packet.emoji)) {
+                            msg.reactions.push(packet.emoji);
+                            saveState();
+                            if (appState.activeChatId === chat.id) renderMessages();
+                        }
+                    }
+                }
+                return;
+            }
             if (packet.type === "MESSAGE" && packet.data) {
                 const data = packet.data;
                 const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
@@ -893,6 +1130,7 @@
 
                 const roomId = (data.roomId || "").toLowerCase().trim();
                 let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+
                 if (!chat && roomId.includes("__")) {
                     const participants = roomId.split("__");
                     if (!participants.includes(myPhone)) return;
@@ -909,7 +1147,6 @@
                     };
                     appState.chats.unshift(chat);
                 }
-
                 if (chat) {
                     if (chat.messages.some(m => m.msgId === data.msgId)) return;
 
@@ -917,6 +1154,8 @@
                     chat.messages.push({
                         msgId: data.msgId,
                         text: `<b>${data.senderName}${badge}:</b> ${data.text || ""}`,
+                        replyTo: data.replyTo || null,
+                        reactions: [],
                         image: data.image || null,
                         type: "in",
                         time: data.timeStr || ""
@@ -931,6 +1170,7 @@
                         renderMessages();
                     }
                     renderChatList();
+                    playNotificationSound();
                 }
             }
         }
@@ -953,7 +1193,6 @@
             updateConnectionBadge(false);
 
             pusherSocket = new WebSocket(PUSHER_WS_URL);
-
             pusherSocket.onmessage = async (event) => {
                 try {
                     const frame = JSON.parse(event.data);
@@ -998,7 +1237,6 @@
                 setTimeout(initPusherRealtime, 2000);
             };
         }
-
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
@@ -1029,7 +1267,6 @@
                 ((u.name && u.name.toLowerCase().includes(qText)) ||
                  (u.phone && u.phone.toLowerCase().includes(qText)))
             );
-
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
@@ -1066,18 +1303,19 @@
             window.syncUserToCloud();
         };
 
-        window.sendCloudPayload = function(targetRoomKey, text, imageBase64) {
+        window.sendCloudPayload = function(targetRoomKey, text, imageBase64, customMsgId, replyToQuote) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
             publishToPusher("docx-event", {
                 type: "MESSAGE",
                 data: {
-                    msgId: Date.now() + "_" + Math.random().toString(16).slice(2, 6),
+                    msgId: customMsgId || (Date.now() + "_" + Math.random().toString(16).slice(2, 6)),
                     roomId: roomId,
                     senderName: appState.user.name,
                     senderPhone: appState.user.phone,
                     text: text || "",
+                    replyTo: replyToQuote || null,
                     image: imageBase64 || "",
                     timeStr: nowStr,
                     timestamp: Date.now()
@@ -1103,7 +1341,6 @@
                 reader.readAsDataURL(file);
             });
         }
-
         window.handleSendImage = async function(event) {
             const file = event.target.files.item(0);
             if (!file) return;
@@ -1114,13 +1351,14 @@
             event.target.value = '';
 
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            activeChat.messages.push({ image: compressedBase64, text: '', type: 'out', time: now });
+            const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
+            activeChat.messages.push({ msgId, image: compressedBase64, text: '', reactions: [], type: 'out', time: now });
             saveState();
             renderMessages();
             renderChatList();
 
             const targetRoom = activeChat.roomId || activeChat.name;
-            window.sendCloudPayload(targetRoom, '', compressedBase64);
+            window.sendCloudPayload(targetRoom, '', compressedBase64, msgId, null);
         };
 
         document.addEventListener("visibilitychange", () => {
