@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DOCX">
     <title>DOCX // Современный мессенджер</title>
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
@@ -81,7 +84,7 @@
         }
 
         .auth-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; backdrop-filter: blur(20px); }
-        .auth-card { background: var(--glass); border: 1px solid var(--border); border-radius: 32px; padding: 36px 26px; width: 100%; max-width: 410px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35); }
+        .auth-card { background: var(--glass); border: 1px solid var(--border); border-radius: 32px; padding: 36px 26px; width: 100%; max-width: 410px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35); animation: modalZoomIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .brand-tag { font-family: 'Space Grotesk', sans-serif; font-size: 2.3rem; font-weight: 700; color: var(--accent); letter-spacing: 3px; margin-bottom: 8px; }
         .auth-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
         .auth-input { width: 100%; padding: 14px 16px; margin-bottom: 12px; border-radius: 16px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 16px; outline: none; transition: 0.2s; }
@@ -138,6 +141,7 @@
         .mobile-back-btn { display: none; font-weight: 700; font-size: 1.25rem; }
         .chat-header-info { display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; }
         .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; animation: pulseOnline 2.2s infinite; }
+        .status-dot.offline { background: #64748b; animation: none; }
         .typing-text { color: var(--accent); font-style: italic; font-weight: 600; }
         .chat-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
@@ -211,7 +215,6 @@
 
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
         .modal-card { background: var(--glass); border: 1px solid var(--border); border-radius: 26px; padding: 24px; width: 100%; max-width: 420px; box-shadow: 0 20px 50px rgba(0,0,0,0.4); animation: modalZoomIn 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
-        .auth-card { animation: modalZoomIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
         .modal-header h3 { font-size: 1.2rem; }
         .close-modal { background: none; border: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; }
@@ -413,6 +416,12 @@
                         <div class="theme-card" data-theme="theme-newyear" onclick="setTheme('theme-newyear')">New Year</div>
                     </div>
                 </div>
+                <div class="settings-section" id="creatorAdminSection" style="display: none; border-color: var(--accent);">
+                    <h3>👑 Панель создателя: выдача галочек ✓</h3>
+                    <div class="form-label" style="margin-bottom: 10px;">Нажмите на кнопку рядом с пользователем, чтобы выдать или снять верификацию:</div>
+                    <div id="adminUsersList" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;"></div>
+                </div>
+
                 <div class="settings-section">
                     <h3>Системные уведомления</h3>
                     <button type="button" class="auth-btn" id="enablePushBtn" style="margin-top:0;" onclick="requestBrowserNotifications()">🔔 Включить Push-уведомления</button>
@@ -441,8 +450,8 @@
                 <button type="button" class="close-modal" onclick="closeModal('newChatModal')">✕</button>
             </div>
             <div>
-                <label class="form-label">Введите @username, имя или номер телефона</label>
-                <input type="text" class="auth-input" id="userSearchQuery" placeholder="Например: @ivan или +7999..." oninput="searchCloudUsers()">
+                <label class="form-label">Введите @username, имя или телефон (поиск работает и по офлайн-пользователям)</label>
+                <input type="text" class="auth-input" id="userSearchQuery" placeholder="Например: @ivan или opgk1rill!" oninput="searchCloudUsers()">
                 <div id="userSearchResults" class="user-search-results">
                     <div style="text-align: center; color: var(--muted); font-size: 0.85rem; padding: 14px;">Загрузка списка пользователей...</div>
                 </div>
@@ -485,7 +494,7 @@
             </div>
             <div class="avatar" id="modalContactAvatar" style="width: 72px; height: 72px; font-size: 1.6rem; margin: 0 auto 14px;">🌐</div>
             <h3 id="modalContactName" style="margin-bottom: 4px;">Общий чат DOCX</h3>
-            <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global • в сети</p>
+            <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global</p>
             <div class="settings-section" style="text-align: left; margin-bottom: 0;">
                 <div class="form-label">О пользователе</div>
                 <div id="modalContactBio" style="font-size: 0.9rem;">Главный открытый канал для всех пользователей DOCX</div>
@@ -493,14 +502,34 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v30';
+        const STORAGE_KEY = 'docx_messenger_state_v31';
         const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
-        const VERIFIED_HANDLES = ['opgk1rill!', '@opgk1rill!'];
+        const VERIFIED_DB_KEY = 'docx_verified_list_v1';
+        const CREATOR_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
+
+        let verifiedSet = new Set(CREATOR_HANDLES);
+        try {
+            const savedVerified = JSON.parse(localStorage.getItem(VERIFIED_DB_KEY));
+            if (Array.isArray(savedVerified)) {
+                savedVerified.forEach(h => verifiedSet.add(h.toLowerCase().trim()));
+            }
+        } catch (e) {}
+
+        function saveVerifiedList() {
+            try {
+                localStorage.setItem(VERIFIED_DB_KEY, JSON.stringify(Array.from(verifiedSet)));
+            } catch (e) {}
+        }
+
+        function isCreatorUser(phoneOrHandle) {
+            if (!phoneOrHandle) return false;
+            return CREATOR_HANDLES.includes(phoneOrHandle.toLowerCase().trim());
+        }
 
         function isUserVerified(phoneOrHandle) {
             if (!phoneOrHandle) return false;
-            return VERIFIED_HANDLES.includes(phoneOrHandle.toLowerCase().trim());
+            return verifiedSet.has(phoneOrHandle.toLowerCase().trim());
         }
 
         function getVerifiedBadgeHtml(phoneOrHandle) {
@@ -555,6 +584,60 @@
             isFlat: false,
             chats: defaultChats
         };
+        function renderAdminVerifyList() {
+            const section = document.getElementById('creatorAdminSection');
+            const listEl = document.getElementById('adminUsersList');
+            if (!section || !listEl) return;
+
+            if (!isCreatorUser(appState.user.phone)) {
+                section.style.display = 'none';
+                return;
+            }
+            section.style.display = 'block';
+            listEl.innerHTML = '';
+
+            const allUsers = Object.values(accountsDb);
+            if (allUsers.length === 0) {
+                listEl.innerHTML = '<div style="font-size:0.85rem; color:var(--muted);">Пока нет зарегистрированных пользователей.</div>';
+                return;
+            }
+
+            allUsers.forEach(acc => {
+                const cleanKey = (acc.phone || '').toLowerCase().trim();
+                const verified = isUserVerified(cleanKey);
+                const isSelf = isCreatorUser(cleanKey);
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); gap:8px;';
+                row.innerHTML = `
+                    <div style="min-width:0;">
+                        <div style="font-weight:700; font-size:0.9rem;">${acc.name}${getVerifiedBadgeHtml(cleanKey)}</div>
+                        <div style="font-size:0.78rem; color:var(--accent);">${acc.phone}</div>
+                    </div>
+                    ${isSelf
+                        ? '<span style="font-size:0.78rem; color:var(--muted);">Создатель</span>'
+                        : `<button type="button" class="small-btn" onclick="toggleUserVerification('${cleanKey}')">${verified ? '❌ Снять ✓' : '✅ Выдать ✓'}</button>`
+                    }
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function toggleUserVerification(targetHandle) {
+            if (!isCreatorUser(appState.user.phone)) return;
+            const clean = targetHandle.toLowerCase().trim();
+            if (verifiedSet.has(clean)) {
+                verifiedSet.delete(clean);
+            } else {
+                verifiedSet.add(clean);
+            }
+            saveVerifiedList();
+            renderAdminVerifyList();
+            renderChatList();
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", { type: "VERIFIED_SYNC", list: Array.from(verifiedSet) });
+            }
+        }
+
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
@@ -565,9 +648,7 @@
                     accountsDb[cleanKey].avatar = appState.user.avatar;
                     saveAccountsDb();
                 }
-            } catch (e) {
-                console.warn('Локальная память переполнена или ограничена');
-            }
+            } catch (e) {}
         }
 
         function resetAllData() {
@@ -589,7 +670,6 @@
                 ? 'Уже есть аккаунт? <span>Войти</span>'
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
-
         function handleLoginSubmit() {
             const rawPhone = document.getElementById('authPhone').value.trim();
             const pass = document.getElementById('authPass').value.trim();
@@ -614,7 +694,7 @@
                     phone: rawPhone,
                     pass: pass,
                     name: regName,
-                    bio: isUserVerified(rawPhone) ? 'Создатель мессенджера DOCX' : 'Пользователь мессенджера DOCX',
+                    bio: isCreatorUser(rawPhone) ? 'Создатель мессенджера DOCX' : 'Пользователь мессенджера DOCX',
                     avatar: { type: 'initials', value: regName.slice(0, 2).toUpperCase() }
                 };
                 accountsDb[cleanKey] = newAccount;
@@ -668,114 +748,6 @@
             document.body.classList.remove('mobile-chat-open');
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('authScreen').style.display = 'flex';
-        }
-        let activeReplyData = null;
-        let selectedMsgIndex = null;
-        let newRoomType = 'group';
-        let typingTimer = null;
-        let lastTypingSentAt = 0;
-
-        function playNotificationSound() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
-                gain.gain.setValueAtTime(0.08, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.25);
-            } catch (e) {}
-        }
-
-        function requestBrowserNotifications() {
-            if (!("Notification" in window)) {
-                alert("Ваш браузер не поддерживает системные Push-уведомления.");
-                return;
-            }
-            Notification.requestPermission().then((perm) => {
-                const btn = document.getElementById('enablePushBtn');
-                if (perm === "granted") {
-                    if (btn) btn.textContent = "✅ Push-уведомления включены";
-                    new Notification("DOCX // Уведомления активны", {
-                        body: "Теперь вы будете получать уведомления, даже если вкладка свёрнута!"
-                    });
-                } else {
-                    alert("Разрешение на уведомления отклонено в настройках браузера.");
-                }
-            });
-        }
-
-        function showSystemPushNotification(senderName, textContent, chatId) {
-            if (!("Notification" in window) || Notification.permission !== "granted") return;
-            if (document.visibilityState === "visible" && appState.activeChatId === chatId) return;
-
-            const cleanBody = textContent ? textContent.replace(/<[^>]*>/g, '') : "📷 Отправлено изображение";
-            const notif = new Notification(`DOCX • ${senderName}`, {
-                body: cleanBody
-            });
-            notif.onclick = () => {
-                window.focus();
-                if (chatId) selectChat(chatId, true);
-                notif.close();
-            };
-        }
-
-        function notifyTyping() {
-            const now = Date.now();
-            if (now - lastTypingSentAt < 2000) return;
-            lastTypingSentAt = now;
-            const chat = appState.chats.find(c => c.id === appState.activeChatId);
-            if (!chat || typeof publishToPusher !== 'function') return;
-            publishToPusher("docx-event", {
-                type: "TYPING",
-                roomId: (chat.roomId || chat.name).toLowerCase().trim(),
-                senderName: appState.user.name,
-                senderPhone: appState.user.phone
-            });
-        }
-
-        function selectRoomType(type) {
-            newRoomType = type;
-            document.getElementById('typeGroupBtn').classList.toggle('active', type === 'group');
-            document.getElementById('typeChannelBtn').classList.toggle('active', type === 'channel');
-        }
-
-        function createGroupOrChannel() {
-            const name = document.getElementById('newGroupName').value.trim();
-            const bio = document.getElementById('newGroupBio').value.trim();
-            if (!name) return;
-
-            const roomCode = (newRoomType === 'channel' ? 'ch_' : 'grp_') + Date.now().toString(36);
-            const newChat = {
-                id: roomCode,
-                roomId: roomCode,
-                isChannel: newRoomType === 'channel',
-                ownerPhone: appState.user.phone.toLowerCase().trim(),
-                name: name,
-                handle: (newRoomType === 'channel' ? '📢 Канал' : '👥 Группа'),
-                bio: bio || (newRoomType === 'channel' ? 'Публичный канал DOCX' : 'Групповой чат DOCX'),
-                initials: newRoomType === 'channel' ? '📢' : '👥',
-                unread: 0,
-                messages: [
-                    { text: `${newRoomType === 'channel' ? 'Канал' : 'Группа'} «${name}» создана!`, type: 'in', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-                ]
-            };
-
-            appState.chats.unshift(newChat);
-            saveState();
-            closeModal('createGroupModal');
-            document.getElementById('newGroupName').value = '';
-            document.getElementById('newGroupBio').value = '';
-            selectChat(newChat.id, true);
-
-            if (typeof publishToPusher === 'function') {
-                publishToPusher("docx-event", { type: "ROOM_CREATED", room: newChat });
-            }
         }
         function openMsgActionBar(index) {
             selectedMsgIndex = index;
@@ -895,7 +867,6 @@
             saveState();
             if (window.syncUserToCloud) window.syncUserToCloud();
         }
-
         function openSettings() {
             document.getElementById('chatWorkspace').style.display = 'none';
             document.getElementById('settingsWorkspace').style.display = 'block';
@@ -903,7 +874,58 @@
             if (btn && "Notification" in window && Notification.permission === "granted") {
                 btn.textContent = "✅ Push-уведомления включены";
             }
+            const adminBlock = document.getElementById('adminVerifySection');
+            if (adminBlock) {
+                const isCreator = ['opgk1rill!', '@opgk1rill!'].includes((appState.user.phone || '').toLowerCase().trim());
+                adminBlock.style.display = isCreator ? 'block' : 'none';
+                if (isCreator) renderAdminVerifyList();
+            }
         }
+
+        function renderAdminVerifyList() {
+            const listEl = document.getElementById('adminVerifyList');
+            if (!listEl) return;
+            const allUsers = Object.values(accountsDb);
+            if (allUsers.length === 0) {
+                listEl.innerHTML = '<div style="font-size:0.82rem; color:var(--muted);">Пока нет других зарегистрированных аккаунтов.</div>';
+                return;
+            }
+            listEl.innerHTML = '';
+            allUsers.forEach(acc => {
+                const clean = acc.phone.toLowerCase().trim();
+                const hasCheck = isUserVerified(clean);
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border-radius:12px; background:rgba(255,255,255,0.04); margin-bottom:6px; border:1px solid var(--border);';
+                row.innerHTML = `
+                    <div>
+                        <div style="font-weight:700; font-size:0.9rem;">${acc.name}${getVerifiedBadgeHtml(clean)}</div>
+                        <div style="font-size:0.75rem; color:var(--accent);">${acc.phone}</div>
+                    </div>
+                    <button type="button" class="small-btn" onclick="toggleUserVerification('${clean}')">
+                        ${hasCheck ? '❌ Убрать ✓' : '✅ Выдать ✓'}
+                    </button>
+                `;
+                listEl.appendChild(row);
+            });
+        }
+
+        function toggleUserVerification(targetHandle) {
+            const clean = targetHandle.toLowerCase().trim();
+            if (clean === 'opgk1rill!' || clean === '@opgk1rill!') return;
+            const idx = verifiedHandlesList.indexOf(clean);
+            if (idx === -1) {
+                verifiedHandlesList.push(clean);
+            } else {
+                verifiedHandlesList.splice(idx, 1);
+            }
+            try { localStorage.setItem(VERIFIED_DB_KEY, JSON.stringify(verifiedHandlesList)); } catch (e) {}
+            renderAdminVerifyList();
+            renderChatList();
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", { type: "VERIFIED_SYNC", list: verifiedHandlesList });
+            }
+        }
+
         function closeSettings() {
             document.getElementById('settingsWorkspace').style.display = 'none';
             document.getElementById('chatWorkspace').style.display = 'flex';
@@ -915,16 +937,8 @@
                 c.classList.toggle('active', c.getAttribute('data-theme') === appState.theme);
             });
         }
-        function setTheme(themeClass) {
-            appState.theme = themeClass;
-            applyAppearance();
-            saveState();
-        }
-        function setLayout(isFlat) {
-            appState.isFlat = isFlat;
-            applyAppearance();
-            saveState();
-        }
+        function setTheme(themeClass) { appState.theme = themeClass; applyAppearance(); saveState(); }
+        function setLayout(isFlat) { appState.isFlat = isFlat; applyAppearance(); saveState(); }
         function saveProfileChanges() {
             const newName = document.getElementById('editNameInput').value.trim();
             const newPhone = document.getElementById('editPhoneInput').value.trim();
@@ -977,6 +991,22 @@
         }
 
         function filterChats() { renderChatList(document.getElementById('searchInput').value); }
+        function updateChatPresenceStatus(chat) {
+            if (!chat) return;
+            const sub = document.getElementById('activeChatSubtitle');
+            const modalSub = document.getElementById('modalContactHandle');
+            if (chat.id === 'global_docx_chat' || chat.isChannel || chat.roomId?.startsWith('grp_')) {
+                sub.innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
+                if (modalSub) modalSub.textContent = `${chat.handle || '@chat'} • активен`;
+                return;
+            }
+            const cleanHandle = (chat.handle || '').toLowerCase().trim();
+            const isOnlineNow = Boolean(activeOnlineSet[cleanHandle]);
+            const dotClass = isOnlineNow ? 'status-dot' : 'status-dot offline';
+            const statusText = isOnlineNow ? 'в сети' : 'не в сети';
+            sub.innerHTML = `<span class="${dotClass}"></span>${chat.handle} • ${statusText}`;
+            if (modalSub) modalSub.textContent = `${chat.handle} • ${statusText}`;
+        }
 
         function selectChat(id, openOnMobile = false) {
             appState.activeChatId = id;
@@ -988,11 +1018,11 @@
 
             document.getElementById('activeChatName').innerHTML = chat.name + getVerifiedBadgeHtml(chat.handle);
             document.getElementById('activeChatAvatar').textContent = chat.initials;
-            document.getElementById('activeChatSubtitle').innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
             document.getElementById('modalContactName').innerHTML = chat.name + getVerifiedBadgeHtml(chat.handle);
             document.getElementById('modalContactAvatar').textContent = chat.initials;
-            document.getElementById('modalContactHandle').textContent = `${chat.handle || '@user'} • в сети`;
             document.getElementById('modalContactBio').textContent = chat.bio || 'Пользователь мессенджера DOCX';
+
+            updateChatPresenceStatus(chat);
 
             const inputBar = document.getElementById('chatInputBar');
             if (inputBar) {
@@ -1047,7 +1077,6 @@
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
         function openUserSearchModal() {
             openModal('newChatModal');
             document.getElementById('userSearchQuery').value = '';
@@ -1095,7 +1124,7 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений, синхронизация аккаунтов, реакций и групп через Pusher Channels -->
+    <!-- Мгновенная доставка сообщений, синхронизация аккаунтов, статусов и групп через Pusher Channels -->
     <script>
         const PUSHER_APP_ID = "2213934";
         const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
@@ -1107,11 +1136,11 @@
         const PUSHER_CHANNEL = "private-docx-messenger-ru-2026";
         const S = String.fromCharCode(47);
         const PUSHER_WS_URL = "wss:" + S + S + "ws-" + PUSHER_CLUSTER + ".pusher.com:443" + S + "app" + S + PUSHER_KEY + "?protocol=7&client=js&version=8.4.0&flash=false";
-
         let pusherSocket = null;
         let pusherConnected = false;
         let pusherSocketId = null;
         let onlineUsersMap = {};
+        let activeOnlineSet = {};
         const textEnc = new TextEncoder();
 
         function updateConnectionBadge(isOnline) {
@@ -1136,6 +1165,9 @@
                 if (Object.keys(accountsDb).length > 0) {
                     publishToPusher("docx-event", { type: "ACCOUNT_SYNC", accounts: accountsDb });
                 }
+                if (verifiedHandlesList.length > 0) {
+                    publishToPusher("docx-event", { type: "VERIFIED_SYNC", list: verifiedHandlesList });
+                }
                 return;
             }
 
@@ -1151,6 +1183,20 @@
                 return;
             }
 
+            if (packet.type === "VERIFIED_SYNC" && Array.isArray(packet.list)) {
+                verifiedHandlesList = Array.from(new Set(['opgk1rill!', '@opgk1rill!', ...packet.list]));
+                try { localStorage.setItem(VERIFIED_DB_KEY, JSON.stringify(verifiedHandlesList)); } catch (e) {}
+                renderChatList();
+                return;
+            }
+
+            if (packet.type === "USER_OFFLINE" && packet.phone) {
+                const offPhone = packet.phone.toLowerCase().trim();
+                delete activeOnlineSet[offPhone];
+                const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+                if (activeChat) updateChatPresenceStatus(activeChat);
+                return;
+            }
             if (packet.type === "WHO_IS_ONLINE") {
                 window.syncUserToCloud();
                 return;
@@ -1158,7 +1204,12 @@
 
             if (packet.type === "PROFILE" && packet.user) {
                 const uPhone = (packet.user.phone || "").toLowerCase().trim();
-                if (uPhone) onlineUsersMap[uPhone] = packet.user;
+                if (uPhone) {
+                    onlineUsersMap[uPhone] = packet.user;
+                    activeOnlineSet[uPhone] = true;
+                    const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+                    if (activeChat) updateChatPresenceStatus(activeChat);
+                }
                 return;
             }
 
@@ -1170,7 +1221,7 @@
                     sub.innerHTML = `<span class="typing-text">✍️ ${packet.senderName} печатает...</span>`;
                     clearTimeout(typingTimer);
                     typingTimer = setTimeout(() => {
-                        sub.innerHTML = `<span class="status-dot"></span>${activeChat.handle || 'в сети'}`;
+                        updateChatPresenceStatus(activeChat);
                     }, 2500);
                 }
                 return;
@@ -1205,6 +1256,9 @@
                 const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
                 if (isMe) return;
 
+                const senderClean = (data.senderPhone || "").toLowerCase().trim();
+                if (senderClean) activeOnlineSet[senderClean] = true;
+
                 const roomId = (data.roomId || "").toLowerCase().trim();
                 let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
 
@@ -1224,7 +1278,6 @@
                     };
                     appState.chats.unshift(chat);
                 }
-
                 if (chat) {
                     if (chat.messages.some(m => m.msgId === data.msgId)) return;
 
@@ -1246,6 +1299,7 @@
                     saveState();
                     if (appState.activeChatId === chat.id) {
                         renderMessages();
+                        updateChatPresenceStatus(chat);
                     }
                     renderChatList();
                     playNotificationSound();
@@ -1325,6 +1379,7 @@
         window.syncUserToCloud = function() {
             if (!appState.isLoggedIn || !appState.user.phone) return;
             const cleanPhone = appState.user.phone.toLowerCase().trim();
+            activeOnlineSet[cleanPhone] = true;
 
             const profileData = {
                 phone: cleanPhone,
@@ -1343,8 +1398,28 @@
 
             window.syncUserToCloud();
             publishToPusher("docx-event", { type: "WHO_IS_ONLINE" });
+            publishToPusher("docx-event", { type: "REQUEST_ACCOUNTS" });
 
-            const users = Object.values(onlineUsersMap);
+            const combinedMap = {};
+            Object.values(accountsDb).forEach(acc => {
+                if (acc && acc.phone) {
+                    const k = acc.phone.toLowerCase().trim();
+                    combinedMap[k] = {
+                        phone: acc.phone,
+                        name: acc.name,
+                        bio: acc.bio || 'Пользователь мессенджера DOCX',
+                        avatarEmoji: acc.avatar && acc.avatar.type === 'emoji' ? acc.avatar.value : ''
+                    };
+                }
+            });
+            Object.values(onlineUsersMap).forEach(u => {
+                if (u && u.phone) {
+                    const k = u.phone.toLowerCase().trim();
+                    combinedMap[k] = u;
+                }
+            });
+
+            const users = Object.values(combinedMap);
             const myPhone = appState.user.phone.toLowerCase().trim();
 
             const filtered = users.filter(u =>
@@ -1356,8 +1431,8 @@
             if (filtered.length === 0) {
                 container.innerHTML = `
                     <div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:14px; line-height:1.5;">
-                        В сети Pusher сейчас: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
-                        Откройте сайт на втором устройстве под <b>другим @username</b> и нажмите кнопку:<br>
+                        Пользователей в базе: <b>${users.length}</b> (вы: <b>${myPhone}</b>).<br>
+                        Если друг только что зарегистрировался, нажмите:<br>
                         <button type="button" class="small-btn" style="margin-top:10px;" onclick="searchCloudUsers()">🔄 Обновить список</button>
                     </div>`;
                 return;
@@ -1374,18 +1449,21 @@
                     avatarEmoji: u.avatarEmoji
                 });
                 const badge = u.avatarEmoji || (u.name ? u.name.slice(0, 2).toUpperCase() : '??');
+                const isOnline = Boolean(activeOnlineSet[u.phone.toLowerCase().trim()]);
+                const statusTag = isOnline
+                    ? '<span style="color:#10b981; font-size:0.75rem;">● в сети</span>'
+                    : '<span style="color:#64748b; font-size:0.75rem;">● не в сети</span>';
                 card.innerHTML = `
                     <div class="avatar">${badge}</div>
                     <div style="flex:1; min-width:0;">
                         <div style="font-weight:700; font-size:0.95rem;">${u.name}${getVerifiedBadgeHtml(u.phone)}</div>
-                        <div style="font-size:0.8rem; color:var(--accent);">${u.phone}</div>
+                        <div style="font-size:0.8rem; color:var(--accent);">${u.phone} • ${statusTag}</div>
                     </div>
                     <div style="font-size:0.8rem; color:var(--muted);">Написать →</div>
                 `;
                 container.appendChild(card);
             });
         };
-
         window.subscribeToCloudChat = function() {
             window.syncUserToCloud();
         };
@@ -1457,6 +1535,12 @@
                     window.syncUserToCloud();
                     publishToPusher("docx-event", { type: "REQUEST_ACCOUNTS" });
                 }
+            }
+        });
+
+        window.addEventListener("beforeunload", () => {
+            if (appState.isLoggedIn && appState.user.phone && typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", { type: "USER_OFFLINE", phone: appState.user.phone });
             }
         });
 
