@@ -421,10 +421,9 @@
                     <div class="form-label" style="margin-bottom: 10px;">Нажмите на кнопку рядом с пользователем, чтобы выдать или снять верификацию:</div>
                     <div id="adminUsersList" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;"></div>
                 </div>
-
-                <div class="settings-section">
-                    <h3>Системные уведомления</h3>
-                    <button type="button" class="auth-btn" id="enablePushBtn" style="margin-top:0;" onclick="requestBrowserNotifications()">🔔 Включить Push-уведомления</button>
+                <div class="settings-section" id="adminVerifySection" style="display: none;">
+                    <h3>👑 Управление верификацией (✓)</h3>
+                    <div id="adminVerifyList"></div>
                 </div>
 
                 <div class="settings-section">
@@ -505,6 +504,17 @@
         const STORAGE_KEY = 'docx_messenger_state_v31';
         const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
         const VERIFIED_DB_KEY = 'docx_verified_list_v1';
+        let verifiedHandlesList = ['opgk1rill!', '@opgk1rill!'];
+        try {
+            const savedV = JSON.parse(localStorage.getItem(VERIFIED_DB_KEY));
+            if (Array.isArray(savedV)) verifiedHandlesList = Array.from(new Set(['opgk1rill!', '@opgk1rill!', ...savedV]));
+        } catch (e) {}
+
+        function isUserVerified(phoneOrHandle) {
+            if (!phoneOrHandle) return false;
+            return verifiedHandlesList.includes(phoneOrHandle.toLowerCase().trim());
+        }
+
         const CREATOR_HANDLES = ['opgk1rill!', '@opgk1rill!'];
         let isRegisterMode = false;
 
