@@ -121,7 +121,7 @@
         .sidebar-controls { padding: 12px 14px; display: flex; gap: 6px; }
         .search-input { flex: 1; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 15px; outline: none; min-width: 0; }
         .search-input:focus { border-color: var(--accent); }
-        .icon-btn { width: 40px; height: 40px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: 0.2s; flex-shrink: 0; }
+        .icon-btn { width: 40px; height: 40px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: 0.2s; flex-shrink: 0; position: relative; }
         .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
         .chat-list { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
@@ -137,20 +137,48 @@
         .unread-badge { background: var(--accent); color: var(--accent-text); font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
         .chat-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
         .chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
-        .mobile-back-btn { display: none; font-weight: 700; font-size: 1.25rem; }
+        .mobile-back-btn { display: none; font-weight: 700; font-size: 1.25rem; position: relative; }
+        .back-unread-badge {
+            position: absolute; top: -6px; right: -6px;
+            background: #f43f5e; color: #ffffff;
+            font-size: 0.68rem; font-weight: 800;
+            padding: 1px 6px; border-radius: 10px;
+            display: none; box-shadow: 0 2px 8px rgba(244,63,94,0.6);
+        }
+        .top-notif-toast {
+            position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+            background: var(--glass); backdrop-filter: blur(24px);
+            border: 1px solid var(--accent); border-radius: 18px;
+            padding: 10px 16px; display: none; align-items: center; gap: 10px;
+            z-index: 300; cursor: pointer; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+            max-width: 92vw; animation: modalZoomIn 0.25s ease both;
+        }
         .chat-header-info { display: flex; align-items: center; gap: 12px; cursor: pointer; min-width: 0; }
         .status-dot { width: 9px; height: 9px; border-radius: 50%; background: #10b981; display: inline-block; margin-right: 5px; animation: pulseOnline 2.2s infinite; }
         .status-dot.offline { background: #64748b; animation: none; }
         .typing-text { color: var(--accent); font-style: italic; font-weight: 600; }
-        .chat-header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .chat-header-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+        .chat-search-bar {
+            display: none; padding: 8px 14px; background: var(--input-bg);
+            border-bottom: 1px solid var(--border); align-items: center; gap: 8px;
+        }
+        .msg-highlight { outline: 2px solid var(--accent); box-shadow: 0 0 12px var(--accent); }
+        .forwarded-tag { font-size: 0.75rem; color: var(--accent); font-style: italic; margin-bottom: 4px; opacity: 0.9; }
+        .msg-sticker { max-width: 140px; max-height: 140px; border-radius: 12px; display: block; object-fit: contain; }
 
         .messages-box { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+        .messages-box.wp-dots { background-image: radial-gradient(rgba(255,255,255,0.12) 1.5px, transparent 1.5px); background-size: 20px 20px; }
+        .messages-box.wp-grid { background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 24px 24px; }
+        .messages-box.wp-aurora { background: linear-gradient(160deg, rgba(56,189,248,0.14), rgba(168,85,247,0.14), rgba(16,185,129,0.1)); }
+        .messages-box.wp-custom { background-size: cover; background-position: center; }
+
         .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; animation: msgPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .msg:active { transform: scale(0.98); }
         .msg.in { align-self: flex-start; background: var(--msg-in); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
         .msg.out { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 6px; }
         .msg-img { max-width: 100%; max-height: 240px; border-radius: 14px; margin-bottom: 6px; display: block; object-fit: cover; }
-        .msg-meta { font-size: 0.68rem; opacity: 0.85; text-align: right; margin-top: 4px; }
+        .msg-meta { font-size: 0.68rem; opacity: 0.75; text-align: right; margin-top: 4px; }
 
         .reply-quote {
             border-left: 3px solid var(--accent); background: rgba(0, 0, 0, 0.22);
@@ -182,8 +210,14 @@
         .chat-emoji-popover {
             position: absolute; bottom: 68px; left: 12px; background: var(--glass); backdrop-filter: blur(24px);
             border: 1px solid var(--border); border-radius: 18px; padding: 10px; display: none;
-            gap: 6px; flex-wrap: wrap; width: 260px; box-shadow: 0 12px 30px rgba(0,0,0,0.4); z-index: 50;
+            gap: 6px; flex-wrap: wrap; width: 280px; box-shadow: 0 12px 30px rgba(0,0,0,0.4); z-index: 50;
         }
+        .sticker-tabs { display: flex; gap: 6px; width: 100%; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+        .sticker-tab-btn { flex: 1; padding: 5px; border-radius: 8px; border: none; background: transparent; color: var(--muted); font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+        .sticker-tab-btn.active { background: var(--accent); color: var(--accent-text); }
+        .sticker-grid { display: flex; gap: 8px; flex-wrap: wrap; max-height: 160px; overflow-y: auto; width: 100%; }
+        .sticker-item-btn { width: 54px; height: 54px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); padding: 4px; cursor: pointer; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .sticker-item-btn img { width: 100%; height: 100%; object-fit: contain; }
 
         .settings-workspace {
             display: none; flex: 1; margin: 16px; background: var(--glass);
@@ -252,6 +286,14 @@
     </style>
 </head>
 <body>
+    <div class="top-notif-toast" id="topNotifToast">
+        <div class="avatar" id="topNotifAvatar" style="width:34px; height:34px; font-size:0.85rem;">??</div>
+        <div style="min-width:0; flex:1;">
+            <div style="font-weight:700; font-size:0.85rem; color:var(--accent);" id="topNotifTitle">Новое сообщение</div>
+            <div style="font-size:0.8rem; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="topNotifBody">Текст сообщения...</div>
+        </div>
+    </div>
+
     <div class="auth-screen" id="authScreen">
         <div class="auth-card">
             <div class="brand-tag">DOCX</div>
@@ -295,7 +337,10 @@
             <main class="chat-area">
                 <div class="chat-header">
                     <div class="chat-header-left">
-                        <button type="button" class="icon-btn mobile-back-btn" onclick="closeMobileChat()" title="Назад к чатам">←</button>
+                        <button type="button" class="icon-btn mobile-back-btn" onclick="closeMobileChat()" title="Назад к чатам">
+                            ←
+                            <span class="back-unread-badge" id="mobileBackBadge">0</span>
+                        </button>
                         <div class="chat-header-info" onclick="openModal('profileModal')">
                             <div class="avatar" id="activeChatAvatar">🌐</div>
                             <div style="min-width: 0;">
@@ -305,9 +350,15 @@
                         </div>
                     </div>
                     <div class="chat-header-actions">
+                        <button type="button" class="icon-btn" title="Поиск по сообщениям" onclick="toggleInChatSearch()">🔍</button>
                         <button type="button" class="icon-btn" title="Аудиозвонок" onclick="alert('Звонок пользователю...')">📞</button>
                         <button type="button" class="icon-btn" title="Информация о контакте" onclick="openModal('profileModal')">ℹ</button>
                     </div>
+                </div>
+
+                <div class="chat-search-bar" id="chatSearchBar">
+                    <input type="text" class="search-input" id="inChatSearchInput" placeholder="Найти слово в переписке..." oninput="searchInsideChat()">
+                    <button type="button" class="small-btn" onclick="toggleInChatSearch()">✕</button>
                 </div>
 
                 <div class="messages-box" id="messagesBox"></div>
@@ -319,21 +370,37 @@
                     <button type="button" class="emoji-opt" onclick="applyReaction('😂')">😂</button>
                     <button type="button" class="emoji-opt" onclick="applyReaction('😮')">😮</button>
                     <button type="button" class="small-btn" onclick="startReplyToSelected()">↩ Ответить</button>
+                    <button type="button" class="small-btn" onclick="openForwardModal()">↪ Переслать</button>
                     <button type="button" class="small-btn" id="deleteSelectedMsgBtn" style="color:#fb7185; border-color:rgba(244,63,94,0.4);" onclick="deleteSelectedMessage()">🗑 Удалить</button>
                     <button type="button" class="small-btn" onclick="closeMsgActionBar()">✕</button>
                 </div>
 
                 <div class="chat-emoji-popover" id="chatEmojiPopover">
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('😀')">😀</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('😂')">😂</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('🔥')">🔥</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('👍')">👍</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('❤️')">❤️</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('🚀')">🚀</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('🎉')">🎉</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('😎')">😎</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('🤝')">🤝</button>
-                    <button type="button" class="emoji-opt" onclick="insertChatEmoji('💡')">💡</button>
+                    <div class="sticker-tabs">
+                        <button type="button" class="sticker-tab-btn active" id="tabEmojiBtn" onclick="switchPickerTab('emoji')">😊 Эмодзи</button>
+                        <button type="button" class="sticker-tab-btn" id="tabStickerBtn" onclick="switchPickerTab('stickers')">🎨 Стикеры</button>
+                    </div>
+                    <div id="emojiTabContent" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('😀')">😀</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('😂')">😂</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('🔥')">🔥</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('👍')">👍</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('❤️')">❤️</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('🚀')">🚀</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('🎉')">🎉</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('😎')">😎</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('🤝')">🤝</button>
+                        <button type="button" class="emoji-opt" onclick="insertChatEmoji('💡')">💡</button>
+                    </div>
+                    <div id="stickerTabContent" style="display: none; width: 100%;">
+                        <div style="margin-bottom: 8px;">
+                            <label class="small-btn" style="display: block; text-align: center; cursor: pointer;">
+                                ➕ Загрузить свой стикер / мем
+                                <input type="file" accept="image/*" style="display: none;" onchange="handleAddSticker(event)">
+                            </label>
+                        </div>
+                        <div class="sticker-grid" id="customStickersGrid"></div>
+                    </div>
                 </div>
 
                 <div class="reply-banner" id="replyBanner">
@@ -346,7 +413,7 @@
                         📎
                         <input type="file" id="chatImageInput" accept="image/*" style="display: none;" onchange="handleSendImage(event)">
                     </label>
-                    <button type="button" class="icon-btn" title="Эмодзи" onclick="toggleChatEmoji()">😊</button>
+                    <button type="button" class="icon-btn" title="Эмодзи и стикеры" onclick="toggleChatEmoji()">😊</button>
                     <input type="text" class="msg-input" id="messageInput" placeholder="Сообщение..." autocomplete="off" oninput="notifyTyping()" onkeydown="if(event.key==='Enter'){event.preventDefault(); sendTextMessage();}">
                     <button type="button" class="send-btn" onclick="sendTextMessage()">➤</button>
                 </div>
@@ -416,6 +483,20 @@
                         <div class="theme-card" data-theme="theme-newyear" onclick="setTheme('theme-newyear')">New Year</div>
                     </div>
                 </div>
+                <div class="settings-section">
+                    <h3>Обои для чатов</h3>
+                    <div class="theme-grid" style="margin-bottom: 10px;">
+                        <div class="theme-card" onclick="setChatWallpaper('')">Без обоев</div>
+                        <div class="theme-card" onclick="setChatWallpaper('wp-dots')">Точки</div>
+                        <div class="theme-card" onclick="setChatWallpaper('wp-grid')">Сетка</div>
+                        <div class="theme-card" onclick="setChatWallpaper('wp-aurora')">Северное сияние</div>
+                    </div>
+                    <label class="small-btn" style="display: inline-block; cursor: pointer;">
+                        🖼 Загрузить своё фото на фон
+                        <input type="file" accept="image/*" style="display: none;" onchange="handleUploadWallpaper(event)">
+                    </label>
+                </div>
+
                 <div class="settings-section" id="adminVerifySection" style="display: none;">
                     <h3>👑 Управление верификацией (✓)</h3>
                     <div id="adminVerifyList"></div>
@@ -441,7 +522,6 @@
             </div>
         </div>
     </div>
-
     <div class="modal-backdrop" id="newChatModal">
         <div class="modal-card">
             <div class="modal-header">
@@ -482,6 +562,16 @@
                 </div>
                 <button type="button" class="auth-btn" onclick="createGroupOrChannel()">Создать и открыть</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="forwardModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Переслать сообщение в...</h3>
+                <button type="button" class="close-modal" onclick="closeModal('forwardModal')">✕</button>
+            </div>
+            <div id="forwardChatList" class="user-search-results"></div>
         </div>
     </div>
 
@@ -538,7 +628,6 @@
                 localStorage.setItem(ACCOUNTS_DB_KEY, JSON.stringify(accountsDb));
             } catch (e) {}
         }
-
         const defaultChats = [
             {
                 id: 'global_docx_chat',
@@ -549,7 +638,7 @@
                 initials: "🌐",
                 unread: 0,
                 messages: [
-                    { text: "Добро пожаловать! Нажмите на любое сообщение, чтобы ответить, поставить реакцию или удалить.", type: "in", time: "12:00" }
+                    { text: "Добро пожаловать! Нажмите на любое сообщение, чтобы ответить, переслать или поставить реакцию.", type: "in", time: "12:00" }
                 ]
             }
         ];
@@ -571,6 +660,9 @@
                 avatar: { type: 'initials', value: 'ПЛ' }
             },
             theme: '',
+            wallpaper: '',
+            customWallpaperUrl: '',
+            stickers: [],
             isFlat: false,
             chats: defaultChats
         };
@@ -609,7 +701,6 @@
                 ? 'Уже есть аккаунт? <span>Войти</span>'
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
-
         function handleLoginSubmit() {
             const rawPhone = document.getElementById('authPhone').value.trim();
             const pass = document.getElementById('authPass').value.trim();
@@ -694,6 +785,7 @@
         let newRoomType = 'group';
         let typingTimer = null;
         let lastTypingSentAt = 0;
+        let topNotifTimer = null;
 
         function playNotificationSound() {
             try {
@@ -710,6 +802,24 @@
                 osc.start();
                 osc.stop(ctx.currentTime + 0.25);
             } catch (e) {}
+        }
+
+        function showInAppTopBanner(senderName, textContent, chatId) {
+            const toast = document.getElementById('topNotifToast');
+            if (!toast) return;
+            const cleanBody = textContent ? textContent.replace(/<[^>]*>/g, '') : '📷 Отправлено изображение';
+            document.getElementById('topNotifAvatar').textContent = (senderName || '??').slice(0, 2).toUpperCase();
+            document.getElementById('topNotifTitle').textContent = senderName;
+            document.getElementById('topNotifBody').textContent = cleanBody;
+            toast.style.display = 'flex';
+            toast.onclick = () => {
+                toast.style.display = 'none';
+                if (chatId) selectChat(chatId, true);
+            };
+            clearTimeout(topNotifTimer);
+            topNotifTimer = setTimeout(() => {
+                toast.style.display = 'none';
+            }, 4500);
         }
 
         function requestBrowserNotifications() {
@@ -736,7 +846,6 @@
                 }
             });
         }
-
         function showSystemPushNotification(senderName, textContent, chatId) {
             if (!("Notification" in window) || Notification.permission !== "granted") return;
             if (document.visibilityState === "visible" && appState.activeChatId === chatId) return;
@@ -874,31 +983,130 @@
             }
             closeMsgActionBar();
         }
-
+        function toggleInChatSearch() {
+            const bar = document.getElementById('chatSearchBar');
+            const isOpen = bar.style.display === 'flex';
+            bar.style.display = isOpen ? 'none' : 'flex';
+            document.getElementById('inChatSearchInput').value = '';
+            renderMessages();
+            if (!isOpen) document.getElementById('inChatSearchInput').focus();
+        }
+        function searchInsideChat() {
+            renderMessages(document.getElementById('inChatSearchInput').value.toLowerCase().trim());
+        }
+        function openForwardModal() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || selectedMsgIndex === null) return;
+            const list = document.getElementById('forwardChatList');
+            list.innerHTML = '';
+            appState.chats.forEach(targetChat => {
+                const card = document.createElement('div');
+                card.className = 'found-user-card';
+                card.onclick = () => executeForwardMessage(targetChat.id);
+                card.innerHTML = `<div class="avatar">${targetChat.initials}</div><div style="font-weight:700; font-size:0.95rem;">${targetChat.name}</div>`;
+                list.appendChild(card);
+            });
+            openModal('forwardModal');
+        }
+        function executeForwardMessage(targetChatId) {
+            const sourceChat = appState.chats.find(c => c.id === appState.activeChatId);
+            const targetChat = appState.chats.find(c => c.id === targetChatId);
+            if (!sourceChat || !targetChat || selectedMsgIndex === null) return;
+            const orig = sourceChat.messages.at(selectedMsgIndex);
+            if (!orig) return;
+            const cleanText = orig.text ? orig.text.replace(/^<b>.*?<\/b>\s*/, '') : '';
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
+            targetChat.messages.push({ msgId, text: cleanText, image: orig.image || null, isSticker: orig.isSticker || false, forwardedFrom: sourceChat.name, reactions: [], delivered: false, type: 'out', time: now });
+            closeModal('forwardModal');
+            closeMsgActionBar();
+            selectChat(targetChat.id, true);
+            if (window.sendCloudPayload) {
+                window.sendCloudPayload(targetChat.roomId || targetChat.name, cleanText, orig.image || null, msgId, null, sourceChat.name, orig.isSticker || false);
+            }
+        }
+        function setChatWallpaper(wpClass) { appState.wallpaper = wpClass; appState.customWallpaperUrl = ''; applyWallpaper(); saveState(); }
+        async function handleUploadWallpaper(event) {
+            const file = event.target.files.item(0);
+            if (!file) return;
+            appState.wallpaper = 'wp-custom';
+            appState.customWallpaperUrl = await compressImage(file, 900, 0.75);
+            applyWallpaper();
+            saveState();
+        }
+        function applyWallpaper() {
+            const box = document.getElementById('messagesBox');
+            if (!box) return;
+            box.className = 'messages-box ' + (appState.wallpaper || '');
+            box.style.backgroundImage = (appState.wallpaper === 'wp-custom' && appState.customWallpaperUrl) ? `url(${appState.customWallpaperUrl})` : '';
+        }
+        function switchPickerTab(tab) {
+            document.getElementById('tabEmojiBtn').classList.toggle('active', tab === 'emoji');
+            document.getElementById('tabStickerBtn').classList.toggle('active', tab === 'stickers');
+            document.getElementById('emojiTabContent').style.display = tab === 'emoji' ? 'flex' : 'none';
+            document.getElementById('stickerTabContent').style.display = tab === 'stickers' ? 'block' : 'none';
+            if (tab === 'stickers') renderCustomStickers();
+        }
+        async function handleAddSticker(event) {
+            const file = event.target.files.item(0);
+            if (!file) return;
+            const stickerData = await compressImage(file, 220, 0.8);
+            event.target.value = '';
+            if (!appState.stickers) appState.stickers = [];
+            appState.stickers.unshift(stickerData);
+            saveState();
+            renderCustomStickers();
+        }
+        function renderCustomStickers() {
+            const grid = document.getElementById('customStickersGrid');
+            if (!grid) return;
+            const list = appState.stickers || [];
+            if (list.length === 0) {
+                grid.innerHTML = '<div style="font-size:0.78rem; color:var(--muted); padding:8px;">Загрузите любую картинку или мем выше — она станет вашим стикером!</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            list.forEach(src => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'sticker-item-btn';
+                btn.onclick = () => sendStickerMessage(src);
+                btn.innerHTML = `<img src="${src}" alt="Стикер">`;
+                grid.appendChild(btn);
+            });
+        }
+        function sendStickerMessage(stickerBase64) {
+            const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!activeChat) return;
+            document.getElementById('chatEmojiPopover').style.display = 'none';
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
+            activeChat.messages.push({ msgId, image: stickerBase64, isSticker: true, text: '', reactions: [], delivered: false, type: 'out', time: now });
+            saveState();
+            renderMessages();
+            renderChatList();
+            if (window.sendCloudPayload) {
+                window.sendCloudPayload(activeChat.roomId || activeChat.name, '', stickerBase64, msgId, null, null, true);
+            }
+        }
         function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
             if (!text) return;
-
             const activeChat = appState.chats.find(c => c.id === appState.activeChatId);
             if (!activeChat) return;
-
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
             const quote = activeReplyData;
-
             input.value = '';
             cancelReply();
             document.getElementById('chatEmojiPopover').style.display = 'none';
-
             activeChat.messages.push({ msgId, text, replyTo: quote, reactions: [], delivered: false, type: 'out', time: now });
             saveState();
             renderMessages();
             renderChatList();
-
             if (window.sendCloudPayload) {
-                const targetRoom = activeChat.roomId || activeChat.name;
-                window.sendCloudPayload(targetRoom, text, null, msgId, quote);
+                window.sendCloudPayload(activeChat.roomId || activeChat.name, text, null, msgId, quote, null, false);
             }
         }
         function updateMyAvatarUI() {
@@ -1045,12 +1253,25 @@
                 window.syncUserToCloud();
             }
         }
+
+        function updateTotalUnreadBadge() {
+            const badge = document.getElementById('mobileBackBadge');
+            if (!badge) return;
+            const totalUnread = appState.chats.reduce((sum, c) => sum + (c.unread || 0), 0);
+            if (totalUnread > 0) {
+                badge.textContent = totalUnread;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
         function renderChatList(filter = '') {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
             appState.chats.filter(c => c.name.toLowerCase().includes(filter.toLowerCase())).forEach(chat => {
                 const lastMsg = chat.messages[chat.messages.length - 1];
-                const previewText = lastMsg ? (lastMsg.image ? '📷 Изображение' : lastMsg.text.replace(/<[^>]*>/g, '')) : 'Нет сообщений';
+                const previewText = lastMsg ? (lastMsg.isSticker ? '🎨 Стикер' : (lastMsg.image ? '📷 Изображение' : lastMsg.text.replace(/<[^>]*>/g, ''))) : 'Нет сообщений';
                 const item = document.createElement('div');
                 item.className = `chat-item ${chat.id === appState.activeChatId ? 'active' : ''}`;
                 item.onclick = () => selectChat(chat.id, true);
@@ -1069,6 +1290,7 @@
                 `;
                 list.appendChild(item);
             });
+            updateTotalUnreadBadge();
         }
 
         function filterChats() { renderChatList(document.getElementById('searchInput').value); }
@@ -1126,17 +1348,24 @@
             document.body.classList.remove('mobile-chat-open');
         }
 
-        function renderMessages() {
+        function renderMessages(highlightQuery = '') {
             const box = document.getElementById('messagesBox');
             const chat = appState.chats.find(c => c.id === appState.activeChatId);
             if (!chat) return;
             box.innerHTML = '';
+            let firstMatchEl = null;
+
             chat.messages.forEach((m, idx) => {
                 const div = document.createElement('div');
-                div.className = `msg ${m.type}`;
+                const plainText = (m.text || '').replace(/<[^>]*>/g, '').toLowerCase();
+                const isMatch = highlightQuery && plainText.includes(highlightQuery);
+                div.className = `msg ${m.type}${isMatch ? ' msg-highlight' : ''}`;
+                if (isMatch && !firstMatchEl) firstMatchEl = div;
+
                 div.onclick = () => openMsgActionBar(idx);
+                const fwdHtml = m.forwardedFrom ? `<div class="forwarded-tag">↪ Переслано от: ${m.forwardedFrom}</div>` : '';
                 const quoteHtml = m.replyTo ? `<div class="reply-quote">${m.replyTo}</div>` : '';
-                const imgHtml = m.image ? `<img src="${m.image}" class="msg-img" alt="Фото">` : '';
+                const imgHtml = m.image ? `<img src="${m.image}" class="${m.isSticker ? 'msg-sticker' : 'msg-img'}" alt="Медиа">` : '';
                 const textHtml = m.text ? `<div>${m.text}</div>` : '';
                 const reactHtml = (m.reactions && m.reactions.length > 0)
                     ? `<div class="msg-reactions">${m.reactions.map(r => `<span class="reaction-pill">${r}</span>`).join('')}</div>`
@@ -1146,10 +1375,15 @@
                         ? '<span style="color:#a7f3d0; font-weight:700; margin-left:4px;" title="Доставлено">✓✓</span>'
                         : '<span style="opacity:0.65; margin-left:4px;" title="Отправлено">✓</span>')
                     : '';
-                div.innerHTML = `${quoteHtml}${imgHtml}${textHtml}${reactHtml}<div class="msg-meta">${m.time}${ticksHtml}</div>`;
+                div.innerHTML = `${fwdHtml}${quoteHtml}${imgHtml}${textHtml}${reactHtml}<div class="msg-meta">${m.time}${ticksHtml}</div>`;
                 box.appendChild(div);
             });
-            box.scrollTop = box.scrollHeight;
+
+            if (firstMatchEl) {
+                firstMatchEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                box.scrollTop = box.scrollHeight;
+            }
         }
         function toggleChatEmoji() {
             const pop = document.getElementById('chatEmojiPopover');
@@ -1191,8 +1425,10 @@
             closeModal('newChatModal');
             selectChat(chat.id, true);
         }
+
         function bootApp() {
             applyAppearance();
+            applyWallpaper();
             document.getElementById('myName').innerHTML = appState.user.name + getVerifiedBadgeHtml(appState.user.phone);
             document.getElementById('myPhone').textContent = appState.user.phone;
             document.getElementById('editNameInput').value = appState.user.name;
@@ -1233,6 +1469,7 @@
                 : 'DOCX <span style="color:#f59e0b;">○</span>';
             badge.title = isOnline ? 'Pusher подключен (порт 443)' : 'Подключение к Pusher...';
         }
+
         async function hmacSha256Hex(secret, message) {
             const key = await crypto.subtle.importKey("raw", textEnc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
             const sig = await crypto.subtle.sign("HMAC", key, textEnc.encode(message));
@@ -1270,6 +1507,7 @@
                 renderChatList();
                 return;
             }
+
             if (packet.type === "USER_OFFLINE" && packet.phone) {
                 const offPhone = packet.phone.toLowerCase().trim();
                 delete activeOnlineSet[offPhone];
@@ -1277,7 +1515,6 @@
                 if (activeChat) updateChatPresenceStatus(activeChat);
                 return;
             }
-
             if (packet.type === "WHO_IS_ONLINE") {
                 window.syncUserToCloud();
                 return;
@@ -1307,6 +1544,7 @@
                 }
                 return;
             }
+
             if (packet.type === "ROOM_CREATED" && packet.room) {
                 if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
                     appState.chats.unshift(packet.room);
@@ -1368,6 +1606,7 @@
 
                 const roomId = (data.roomId || "").toLowerCase().trim();
                 let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
+
                 if (!chat && roomId.includes("__")) {
                     const participants = roomId.split("__");
                     if (!participants.includes(myPhone)) return;
@@ -1392,6 +1631,8 @@
                         msgId: data.msgId,
                         text: `<b>${data.senderName}${badge}:</b> ${data.text || ""}`,
                         replyTo: data.replyTo || null,
+                        forwardedFrom: data.forwardedFrom || null,
+                        isSticker: Boolean(data.isSticker),
                         reactions: [],
                         image: data.image || null,
                         type: "in",
@@ -1400,6 +1641,7 @@
 
                     if (appState.activeChatId !== chat.id) {
                         chat.unread = (chat.unread || 0) + 1;
+                        showInAppTopBanner(data.senderName, data.isSticker ? '🎨 Стикер' : data.text, chat.id);
                     }
 
                     saveState();
@@ -1438,6 +1680,7 @@
             updateConnectionBadge(false);
 
             pusherSocket = new WebSocket(PUSHER_WS_URL);
+
             pusherSocket.onmessage = async (event) => {
                 try {
                     const frame = JSON.parse(event.data);
@@ -1529,6 +1772,7 @@
                     combinedMap[k] = u;
                 }
             });
+
             const users = Object.values(combinedMap);
             const myPhone = appState.user.phone.toLowerCase().trim();
 
@@ -1547,6 +1791,7 @@
                     </div>`;
                 return;
             }
+
             container.innerHTML = '';
             filtered.forEach(u => {
                 const card = document.createElement('div');
@@ -1577,7 +1822,7 @@
             window.syncUserToCloud();
         };
 
-        window.sendCloudPayload = function(targetRoomKey, text, imageBase64, customMsgId, replyToQuote) {
+        window.sendCloudPayload = function(targetRoomKey, text, imageBase64, customMsgId, replyToQuote, forwardedFromName, isStickerFlag) {
             const roomId = targetRoomKey.toLowerCase().trim();
             const nowStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -1590,6 +1835,8 @@
                     senderPhone: appState.user.phone,
                     text: text || "",
                     replyTo: replyToQuote || null,
+                    forwardedFrom: forwardedFromName || null,
+                    isSticker: Boolean(isStickerFlag),
                     image: imageBase64 || "",
                     timeStr: nowStr,
                     timestamp: Date.now()
@@ -1632,8 +1879,9 @@
             renderChatList();
 
             const targetRoom = activeChat.roomId || activeChat.name;
-            window.sendCloudPayload(targetRoom, '', compressedBase64, msgId, null);
+            window.sendCloudPayload(targetRoom, '', compressedBase64, msgId, null, null, false);
         };
+
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 if (!pusherSocket || pusherSocket.readyState !== WebSocket.OPEN) {
