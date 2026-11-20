@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="DOCX">
     <title>DOCX // Современный мессенджер</title>
     <link rel="preconnect" href="https://googleapis.com">
     <link rel="preconnect" href="https://gstatic.com" crossorigin>
@@ -416,14 +415,14 @@
                         <div class="theme-card" data-theme="theme-newyear" onclick="setTheme('theme-newyear')">New Year</div>
                     </div>
                 </div>
-                <div class="settings-section" id="creatorAdminSection" style="display: none; border-color: var(--accent);">
-                    <h3>👑 Панель создателя: выдача галочек ✓</h3>
-                    <div class="form-label" style="margin-bottom: 10px;">Нажмите на кнопку рядом с пользователем, чтобы выдать или снять верификацию:</div>
-                    <div id="adminUsersList" style="display: flex; flex-direction: column; gap: 8px; max-height: 240px; overflow-y: auto;"></div>
-                </div>
                 <div class="settings-section" id="adminVerifySection" style="display: none;">
                     <h3>👑 Управление верификацией (✓)</h3>
                     <div id="adminVerifyList"></div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Системные уведомления</h3>
+                    <button type="button" class="auth-btn" id="enablePushBtn" style="margin-top:0;" onclick="requestBrowserNotifications()">🔔 Включить Push-уведомления</button>
                 </div>
 
                 <div class="settings-section">
@@ -449,8 +448,8 @@
                 <button type="button" class="close-modal" onclick="closeModal('newChatModal')">✕</button>
             </div>
             <div>
-                <label class="form-label">Введите @username, имя или телефон (поиск работает и по офлайн-пользователям)</label>
-                <input type="text" class="auth-input" id="userSearchQuery" placeholder="Например: @ivan или opgk1rill!" oninput="searchCloudUsers()">
+                <label class="form-label">Введите @username, имя или номер телефона</label>
+                <input type="text" class="auth-input" id="userSearchQuery" placeholder="Например: @ivan или +7999..." oninput="searchCloudUsers()">
                 <div id="userSearchResults" class="user-search-results">
                     <div style="text-align: center; color: var(--muted); font-size: 0.85rem; padding: 14px;">Загрузка списка пользователей...</div>
                 </div>
@@ -493,7 +492,7 @@
             </div>
             <div class="avatar" id="modalContactAvatar" style="width: 72px; height: 72px; font-size: 1.6rem; margin: 0 auto 14px;">🌐</div>
             <h3 id="modalContactName" style="margin-bottom: 4px;">Общий чат DOCX</h3>
-            <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global</p>
+            <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global • в сети</p>
             <div class="settings-section" style="text-align: left; margin-bottom: 0;">
                 <div class="form-label">О пользователе</div>
                 <div id="modalContactBio" style="font-size: 0.9rem;">Главный открытый канал для всех пользователей DOCX</div>
@@ -504,42 +503,22 @@
         const STORAGE_KEY = 'docx_messenger_state_v31';
         const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
         const VERIFIED_DB_KEY = 'docx_verified_list_v1';
+
+        let activeOnlineSet = {};
+        let onlineUsersMap = {};
+        let isRegisterMode = false;
+
         let verifiedHandlesList = ['opgk1rill!', '@opgk1rill!'];
         try {
             const savedV = JSON.parse(localStorage.getItem(VERIFIED_DB_KEY));
-            if (Array.isArray(savedV)) verifiedHandlesList = Array.from(new Set(['opgk1rill!', '@opgk1rill!', ...savedV]));
+            if (Array.isArray(savedV)) {
+                verifiedHandlesList = Array.from(new Set(['opgk1rill!', '@opgk1rill!', ...savedV]));
+            }
         } catch (e) {}
 
         function isUserVerified(phoneOrHandle) {
             if (!phoneOrHandle) return false;
             return verifiedHandlesList.includes(phoneOrHandle.toLowerCase().trim());
-        }
-
-        const CREATOR_HANDLES = ['opgk1rill!', '@opgk1rill!'];
-        let isRegisterMode = false;
-
-        let verifiedSet = new Set(CREATOR_HANDLES);
-        try {
-            const savedVerified = JSON.parse(localStorage.getItem(VERIFIED_DB_KEY));
-            if (Array.isArray(savedVerified)) {
-                savedVerified.forEach(h => verifiedSet.add(h.toLowerCase().trim()));
-            }
-        } catch (e) {}
-
-        function saveVerifiedList() {
-            try {
-                localStorage.setItem(VERIFIED_DB_KEY, JSON.stringify(Array.from(verifiedSet)));
-            } catch (e) {}
-        }
-
-        function isCreatorUser(phoneOrHandle) {
-            if (!phoneOrHandle) return false;
-            return CREATOR_HANDLES.includes(phoneOrHandle.toLowerCase().trim());
-        }
-
-        function isUserVerified(phoneOrHandle) {
-            if (!phoneOrHandle) return false;
-            return verifiedSet.has(phoneOrHandle.toLowerCase().trim());
         }
 
         function getVerifiedBadgeHtml(phoneOrHandle) {
@@ -594,60 +573,6 @@
             isFlat: false,
             chats: defaultChats
         };
-        function renderAdminVerifyList() {
-            const section = document.getElementById('creatorAdminSection');
-            const listEl = document.getElementById('adminUsersList');
-            if (!section || !listEl) return;
-
-            if (!isCreatorUser(appState.user.phone)) {
-                section.style.display = 'none';
-                return;
-            }
-            section.style.display = 'block';
-            listEl.innerHTML = '';
-
-            const allUsers = Object.values(accountsDb);
-            if (allUsers.length === 0) {
-                listEl.innerHTML = '<div style="font-size:0.85rem; color:var(--muted);">Пока нет зарегистрированных пользователей.</div>';
-                return;
-            }
-
-            allUsers.forEach(acc => {
-                const cleanKey = (acc.phone || '').toLowerCase().trim();
-                const verified = isUserVerified(cleanKey);
-                const isSelf = isCreatorUser(cleanKey);
-                const row = document.createElement('div');
-                row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); gap:8px;';
-                row.innerHTML = `
-                    <div style="min-width:0;">
-                        <div style="font-weight:700; font-size:0.9rem;">${acc.name}${getVerifiedBadgeHtml(cleanKey)}</div>
-                        <div style="font-size:0.78rem; color:var(--accent);">${acc.phone}</div>
-                    </div>
-                    ${isSelf
-                        ? '<span style="font-size:0.78rem; color:var(--muted);">Создатель</span>'
-                        : `<button type="button" class="small-btn" onclick="toggleUserVerification('${cleanKey}')">${verified ? '❌ Снять ✓' : '✅ Выдать ✓'}</button>`
-                    }
-                `;
-                listEl.appendChild(row);
-            });
-        }
-
-        function toggleUserVerification(targetHandle) {
-            if (!isCreatorUser(appState.user.phone)) return;
-            const clean = targetHandle.toLowerCase().trim();
-            if (verifiedSet.has(clean)) {
-                verifiedSet.delete(clean);
-            } else {
-                verifiedSet.add(clean);
-            }
-            saveVerifiedList();
-            renderAdminVerifyList();
-            renderChatList();
-            if (typeof publishToPusher === 'function') {
-                publishToPusher("docx-event", { type: "VERIFIED_SYNC", list: Array.from(verifiedSet) });
-            }
-        }
-
         function saveState() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
@@ -658,13 +583,16 @@
                     accountsDb[cleanKey].avatar = appState.user.avatar;
                     saveAccountsDb();
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn('Локальная память переполнена или ограничена');
+            }
         }
 
         function resetAllData() {
             try {
                 localStorage.removeItem(STORAGE_KEY);
                 localStorage.removeItem(ACCOUNTS_DB_KEY);
+                localStorage.removeItem(VERIFIED_DB_KEY);
             } catch (e) {}
             location.reload();
         }
@@ -680,6 +608,7 @@
                 ? 'Уже есть аккаунт? <span>Войти</span>'
                 : 'Нет аккаунта? <span>Зарегистрироваться</span>';
         }
+
         function handleLoginSubmit() {
             const rawPhone = document.getElementById('authPhone').value.trim();
             const pass = document.getElementById('authPass').value.trim();
@@ -704,7 +633,7 @@
                     phone: rawPhone,
                     pass: pass,
                     name: regName,
-                    bio: isCreatorUser(rawPhone) ? 'Создатель мессенджера DOCX' : 'Пользователь мессенджера DOCX',
+                    bio: isUserVerified(rawPhone) ? 'Создатель мессенджера DOCX' : 'Пользователь мессенджера DOCX',
                     avatar: { type: 'initials', value: regName.slice(0, 2).toUpperCase() }
                 };
                 accountsDb[cleanKey] = newAccount;
@@ -759,7 +688,122 @@
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('authScreen').style.display = 'flex';
         }
-        function openMsgActionBar(index) {
+        let activeReplyData = null;
+        let selectedMsgIndex = null;
+        let newRoomType = 'group';
+        let typingTimer = null;
+        let lastTypingSentAt = 0;
+
+        function playNotificationSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.12);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.25);
+            } catch (e) {}
+        }
+
+        function requestBrowserNotifications() {
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+            if (isIOS && !isStandalone) {
+                alert("На iPhone Push-уведомления работают после добавления сайта на экран:\n\n1. Нажмите кнопку «Поделиться» (квадрат со стрелкой вверх) внизу Safari.\n2. Выберите «На экран „Домой“».\n3. Откройте DOCX с рабочего стола и нажмите эту кнопку снова!");
+                return;
+            }
+            if (!("Notification" in window)) {
+                alert("Ваш браузер не поддерживает системные Push-уведомления.");
+                return;
+            }
+            Notification.requestPermission().then((perm) => {
+                const btn = document.getElementById('enablePushBtn');
+                if (perm === "granted") {
+                    if (btn) btn.textContent = "✅ Push-уведомления включены";
+                    new Notification("DOCX // Уведомления активны", {
+                        body: "Теперь вы будете получать уведомления, даже если вкладка свёрнута!"
+                    });
+                } else {
+                    alert("Разрешение на уведомления отклонено в настройках браузера.");
+                }
+            });
+        }
+
+        function showSystemPushNotification(senderName, textContent, chatId) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            if (document.visibilityState === "visible" && appState.activeChatId === chatId) return;
+
+            const cleanBody = textContent ? textContent.replace(/<[^>]*>/g, '') : "📷 Отправлено изображение";
+            const notif = new Notification(`DOCX • ${senderName}`, {
+                body: cleanBody
+            });
+            notif.onclick = () => {
+                window.focus();
+                if (chatId) selectChat(chatId, true);
+                notif.close();
+            };
+        }
+
+        function notifyTyping() {
+            const now = Date.now();
+            if (now - lastTypingSentAt < 2000) return;
+            lastTypingSentAt = now;
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || typeof publishToPusher !== 'function') return;
+            publishToPusher("docx-event", {
+                type: "TYPING",
+                roomId: (chat.roomId || chat.name).toLowerCase().trim(),
+                senderName: appState.user.name,
+                senderPhone: appState.user.phone
+            });
+        }
+
+        function selectRoomType(type) {
+            newRoomType = type;
+            document.getElementById('typeGroupBtn').classList.toggle('active', type === 'group');
+            document.getElementById('typeChannelBtn').classList.toggle('active', type === 'channel');
+        }
+
+        function createGroupOrChannel() {
+            const name = document.getElementById('newGroupName').value.trim();
+            const bio = document.getElementById('newGroupBio').value.trim();
+            if (!name) return;
+
+            const roomCode = (newRoomType === 'channel' ? 'ch_' : 'grp_') + Date.now().toString(36);
+            const newChat = {
+                id: roomCode,
+                roomId: roomCode,
+                isChannel: newRoomType === 'channel',
+                ownerPhone: appState.user.phone.toLowerCase().trim(),
+                name: name,
+                handle: (newRoomType === 'channel' ? '📢 Канал' : '👥 Группа'),
+                bio: bio || (newRoomType === 'channel' ? 'Публичный канал DOCX' : 'Групповой чат DOCX'),
+                initials: newRoomType === 'channel' ? '📢' : '👥',
+                unread: 0,
+                messages: [
+                    { text: `${newRoomType === 'channel' ? 'Канал' : 'Группа'} «${name}» создана!`, type: 'in', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                ]
+            };
+
+            appState.chats.unshift(newChat);
+            saveState();
+            closeModal('createGroupModal');
+            document.getElementById('newGroupName').value = '';
+            document.getElementById('newGroupBio').value = '';
+            selectChat(newChat.id, true);
+
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", { type: "ROOM_CREATED", room: newChat });
+            }
+        }
+            function openMsgActionBar(index) {
             selectedMsgIndex = index;
             document.getElementById('msgActionBar').style.display = 'flex';
         }
@@ -802,7 +846,6 @@
             }
             closeMsgActionBar();
         }
-
         function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -918,7 +961,6 @@
                 listEl.appendChild(row);
             });
         }
-
         function toggleUserVerification(targetHandle) {
             const clean = targetHandle.toLowerCase().trim();
             if (clean === 'opgk1rill!' || clean === '@opgk1rill!') return;
@@ -973,7 +1015,6 @@
                 window.syncUserToCloud();
             }
         }
-
         function renderChatList(filter = '') {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -1075,7 +1116,6 @@
             });
             box.scrollTop = box.scrollHeight;
         }
-
         function toggleChatEmoji() {
             const pop = document.getElementById('chatEmojiPopover');
             pop.style.display = pop.style.display === 'flex' ? 'none' : 'flex';
@@ -1087,6 +1127,7 @@
         }
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
         function openUserSearchModal() {
             openModal('newChatModal');
             document.getElementById('userSearchQuery').value = '';
@@ -1115,7 +1156,6 @@
             closeModal('newChatModal');
             selectChat(chat.id, true);
         }
-
         function bootApp() {
             applyAppearance();
             document.getElementById('myName').innerHTML = appState.user.name + getVerifiedBadgeHtml(appState.user.phone);
@@ -1134,7 +1174,6 @@
 
         bootApp();
     </script>
-    <!-- Мгновенная доставка сообщений, синхронизация аккаунтов, статусов и групп через Pusher Channels -->
     <script>
         const PUSHER_APP_ID = "2213934";
         const PUSHER_KEY = "9e5b0c6bd848fab54b2a";
@@ -1149,8 +1188,6 @@
         let pusherSocket = null;
         let pusherConnected = false;
         let pusherSocketId = null;
-        let onlineUsersMap = {};
-        let activeOnlineSet = {};
         const textEnc = new TextEncoder();
 
         function updateConnectionBadge(isOnline) {
@@ -1161,7 +1198,6 @@
                 : 'DOCX <span style="color:#f59e0b;">○</span>';
             badge.title = isOnline ? 'Pusher подключен (порт 443)' : 'Подключение к Pusher...';
         }
-
         async function hmacSha256Hex(secret, message) {
             const key = await crypto.subtle.importKey("raw", textEnc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
             const sig = await crypto.subtle.sign("HMAC", key, textEnc.encode(message));
@@ -1199,7 +1235,6 @@
                 renderChatList();
                 return;
             }
-
             if (packet.type === "USER_OFFLINE" && packet.phone) {
                 const offPhone = packet.phone.toLowerCase().trim();
                 delete activeOnlineSet[offPhone];
@@ -1207,6 +1242,7 @@
                 if (activeChat) updateChatPresenceStatus(activeChat);
                 return;
             }
+
             if (packet.type === "WHO_IS_ONLINE") {
                 window.syncUserToCloud();
                 return;
@@ -1236,7 +1272,6 @@
                 }
                 return;
             }
-
             if (packet.type === "ROOM_CREATED" && packet.room) {
                 if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
                     appState.chats.unshift(packet.room);
@@ -1271,7 +1306,6 @@
 
                 const roomId = (data.roomId || "").toLowerCase().trim();
                 let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
-
                 if (!chat && roomId.includes("__")) {
                     const participants = roomId.split("__");
                     if (!participants.includes(myPhone)) return;
@@ -1336,7 +1370,6 @@
             updateConnectionBadge(false);
 
             pusherSocket = new WebSocket(PUSHER_WS_URL);
-
             pusherSocket.onmessage = async (event) => {
                 try {
                     const frame = JSON.parse(event.data);
@@ -1428,7 +1461,6 @@
                     combinedMap[k] = u;
                 }
             });
-
             const users = Object.values(combinedMap);
             const myPhone = appState.user.phone.toLowerCase().trim();
 
@@ -1447,7 +1479,6 @@
                     </div>`;
                 return;
             }
-
             container.innerHTML = '';
             filtered.forEach(u => {
                 const card = document.createElement('div');
@@ -1497,7 +1528,6 @@
                 }
             });
         };
-
         function compressImage(file, maxWidth = 450, quality = 0.65) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -1536,7 +1566,6 @@
             const targetRoom = activeChat.roomId || activeChat.name;
             window.sendCloudPayload(targetRoom, '', compressedBase64, msgId, null);
         };
-
         document.addEventListener("visibilitychange", () => {
             if (document.visibilityState === "visible") {
                 if (!pusherSocket || pusherSocket.readyState !== WebSocket.OPEN) {
