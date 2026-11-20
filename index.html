@@ -15,15 +15,16 @@
             --glass: rgba(15, 23, 42, 0.85); --input-bg: rgba(6, 11, 25, 0.8);
             --accent: #38bdf8; --accent-text: #060b19;
             --msg-out: linear-gradient(135deg, #2563eb, #0284c7); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #f8fafc; --muted: #94a3b8;
+            --msg-in: rgba(15, 23, 42, var(--msg-opacity, 0.55)); --text: #f8fafc; --muted: #94a3b8;
             --border: rgba(56, 189, 248, 0.25);
+            --msg-font-size: 0.95rem;
         }
         body.theme-cyber {
             --bg-dark: #070510; --bg-grad-1: rgba(163, 230, 53, 0.15); --bg-grad-2: rgba(192, 132, 252, 0.18);
             --glass: rgba(22, 18, 42, 0.84); --input-bg: rgba(7, 5, 16, 0.8);
             --accent: #a3e635; --accent-text: #070510;
             --msg-out: linear-gradient(135deg, #8b5cf6, #ec4899); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #f8fafc; --muted: #94a3b8;
+            --msg-in: rgba(22, 18, 42, var(--msg-opacity, 0.55)); --text: #f8fafc; --muted: #94a3b8;
             --border: rgba(192, 132, 252, 0.25);
         }
         body.theme-light {
@@ -31,7 +32,7 @@
             --glass: rgba(255, 255, 255, 0.94); --input-bg: #f1f5f9;
             --accent: #2563eb; --accent-text: #ffffff;
             --msg-out: linear-gradient(135deg, #2563eb, #3b82f6); --msg-out-text: #ffffff;
-            --msg-in: #f1f5f9; --text: #0f172a; --muted: #64748b;
+            --msg-in: rgba(241, 245, 249, var(--msg-opacity, 0.85)); --text: #0f172a; --muted: #64748b;
             --border: rgba(15, 23, 42, 0.12);
         }
         body.theme-sunset {
@@ -39,7 +40,7 @@
             --glass: rgba(36, 14, 24, 0.85); --input-bg: rgba(20, 8, 14, 0.8);
             --accent: #fb923c; --accent-text: #14080e;
             --msg-out: linear-gradient(135deg, #f43f5e, #fb923c); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #fff1f2; --muted: #fda4af;
+            --msg-in: rgba(36, 14, 24, var(--msg-opacity, 0.55)); --text: #fff1f2; --muted: #fda4af;
             --border: rgba(251, 146, 60, 0.25);
         }
         body.theme-ocean {
@@ -47,7 +48,7 @@
             --glass: rgba(10, 29, 44, 0.86); --input-bg: rgba(4, 18, 28, 0.8);
             --accent: #2dd4bf; --accent-text: #04121c;
             --msg-out: linear-gradient(135deg, #0284c7, #0d9488); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #f0fdfa; --muted: #99f6e4;
+            --msg-in: rgba(10, 29, 44, var(--msg-opacity, 0.55)); --text: #f0fdfa; --muted: #99f6e4;
             --border: rgba(45, 212, 191, 0.25);
         }
         body.theme-emerald {
@@ -55,7 +56,7 @@
             --glass: rgba(8, 30, 21, 0.86); --input-bg: rgba(4, 20, 13, 0.8);
             --accent: #10b981; --accent-text: #04140d;
             --msg-out: linear-gradient(135deg, #059669, #10b981); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #ecfdf5; --muted: #6ee7b7;
+            --msg-in: rgba(8, 30, 21, var(--msg-opacity, 0.55)); --text: #ecfdf5; --muted: #6ee7b7;
             --border: rgba(16, 185, 129, 0.25);
         }
         body.theme-amethyst {
@@ -63,7 +64,7 @@
             --glass: rgba(25, 12, 42, 0.86); --input-bg: rgba(14, 6, 24, 0.8);
             --accent: #c084fc; --accent-text: #0e0618;
             --msg-out: linear-gradient(135deg, #9333ea, #c026d3); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.08); --text: #faf5ff; --muted: #d8b4fe;
+            --msg-in: rgba(25, 12, 42, var(--msg-opacity, 0.55)); --text: #faf5ff; --muted: #d8b4fe;
             --border: rgba(192, 132, 252, 0.25);
         }
         body.theme-newyear {
@@ -71,7 +72,7 @@
             --glass: rgba(34, 12, 20, 0.86); --input-bg: rgba(22, 7, 12, 0.8);
             --accent: #facc15; --accent-text: #16070c;
             --msg-out: linear-gradient(135deg, #e11d48, #be123c); --msg-out-text: #ffffff;
-            --msg-in: rgba(255, 255, 255, 0.09); --text: #fffbeb; --muted: #fde047;
+            --msg-in: rgba(34, 12, 20, var(--msg-opacity, 0.55)); --text: #fffbeb; --muted: #fde047;
             --border: rgba(250, 204, 21, 0.3);
         }
 
@@ -92,6 +93,44 @@
         .auth-btn:hover { transform: translateY(-2px); opacity: 0.92; }
         .auth-switch { margin-top: 18px; font-size: 0.85rem; color: var(--muted); cursor: pointer; }
         .auth-switch span { color: var(--accent); font-weight: 700; }
+
+        .app { display: none; flex-direction: column; height: 100vh; height: 100dvh; width: 100vw; }
+        .main-workspace { flex: 1; display: flex; padding: 16px; gap: 16px; min-height: 0; transition: 0.3s; }
+        .sidebar { width: 340px; background: var(--glass); backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
+        .chat-area { flex: 1; background: var(--glass); backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; position: relative; }
+
+        body.layout-flat .main-workspace { padding: 0; gap: 0; }
+        body.layout-flat .sidebar { border-radius: 0; border-top: none; border-bottom: none; border-left: none; }
+        body.layout-flat .chat-area { border-radius: 0; border: none; }
+        body.layout-flat .settings-workspace { margin: 0; border-radius: 0; border: none; }
+
+        .sidebar-header { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .user-badge { display: flex; align-items: center; gap: 12px; min-width: 0; cursor: pointer; }
+        .avatar { width: 42px; height: 42px; border-radius: 14px; background: var(--msg-out); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; overflow: hidden; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+        .user-meta { min-width: 0; }
+        .user-meta-name { font-weight: 700; font-size: 0.98rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-meta-phone { font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+        .verified-badge { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: var(--accent); color: var(--accent-text); font-size: 0.65rem; font-weight: 800; margin-left: 5px; vertical-align: middle; flex-shrink: 0; }
+        .docx-badge { font-family: 'Space Grotesk', sans-serif; font-size: 0.8rem; font-weight: 700; color: var(--accent); border: 1px solid var(--border); padding: 4px 10px; border-radius: 10px; letter-spacing: 1px; }
+
+        .sidebar-controls { padding: 12px 14px; display: flex; gap: 6px; }
+        .search-input { flex: 1; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); font-size: 15px; outline: none; min-width: 0; }
+        .search-input:focus { border-color: var(--accent); }
+        .icon-btn { width: 40px; height: 40px; border-radius: 14px; border: 1px solid var(--border); background: var(--input-bg); color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: 0.2s; flex-shrink: 0; position: relative; }
+        .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .chat-list { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 6px; }
+        .chat-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 18px; cursor: pointer; transition: transform 0.2s, background 0.2s, border-color 0.2s; border: 1px solid transparent; }
+        .chat-item:hover { background: rgba(255,255,255,0.05); transform: translateX(4px); }
+        .chat-item.active { background: rgba(255,255,255,0.08); border-color: var(--border); }
+        .chat-info { flex: 1; min-width: 0; }
+        .chat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .chat-name { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-time { font-size: 0.72rem; color: var(--muted); }
+        .chat-bottom { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+        .chat-preview { font-size: 0.83rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unread-badge { background: var(--accent); color: var(--accent-text); font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
         .app { display: none; flex-direction: column; height: 100vh; height: 100dvh; width: 100vw; }
         .main-workspace { flex: 1; display: flex; padding: 16px; gap: 16px; min-height: 0; transition: 0.3s; }
         .sidebar { width: 340px; background: var(--glass); backdrop-filter: blur(24px); border: 1px solid var(--border); border-radius: 28px; display: flex; flex-direction: column; overflow: hidden; transition: 0.3s; }
@@ -172,10 +211,9 @@
         .messages-box.wp-grid { background-image: linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 24px 24px; }
         .messages-box.wp-aurora { background: linear-gradient(160deg, rgba(56,189,248,0.14), rgba(168,85,247,0.14), rgba(16,185,129,0.1)); }
         .messages-box.wp-custom { background-size: cover; background-position: center; }
-
-        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: 0.95rem; line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; animation: msgPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .msg { max-width: 76%; padding: 11px 15px; border-radius: 20px; font-size: var(--msg-font-size, 0.95rem); line-height: 1.45; position: relative; word-wrap: break-word; cursor: pointer; transition: transform 0.15s; animation: msgPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
         .msg:active { transform: scale(0.98); }
-        .msg.in { align-self: flex-start; background: var(--msg-in); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+        .msg.in { align-self: flex-start; background: var(--msg-in); backdrop-filter: blur(10px); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
         .msg.out { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 6px; }
         .msg-img { max-width: 100%; max-height: 240px; border-radius: 14px; margin-bottom: 6px; display: block; object-fit: cover; }
         .msg-meta { font-size: 0.68rem; opacity: 0.75; text-align: right; margin-top: 4px; }
@@ -231,7 +269,6 @@
         .settings-section h3 { font-size: 1rem; margin-bottom: 14px; color: var(--accent); }
         .form-group { margin-bottom: 14px; }
         .form-label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 6px; }
-
         .avatar-setup { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
         .avatar-preview-lg { width: 72px; height: 72px; border-radius: 22px; font-size: 1.8rem; border: 2px solid var(--accent); }
         .avatar-actions { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 200px; }
@@ -333,7 +370,6 @@
 
                 <div class="chat-list" id="chatList"></div>
             </aside>
-
             <main class="chat-area">
                 <div class="chat-header">
                     <div class="chat-header-left">
@@ -469,7 +505,6 @@
                         <button type="button" class="auth-btn" onclick="saveProfileChanges()">Сохранить изменения</button>
                     </div>
                 </div>
-
                 <div class="settings-section">
                     <h3>Цветовая тема</h3>
                     <div class="theme-grid">
@@ -483,6 +518,7 @@
                         <div class="theme-card" data-theme="theme-newyear" onclick="setTheme('theme-newyear')">New Year</div>
                     </div>
                 </div>
+
                 <div class="settings-section">
                     <h3>Обои для чатов</h3>
                     <div class="theme-grid" style="margin-bottom: 10px;">
@@ -497,6 +533,22 @@
                     </label>
                 </div>
 
+                <div class="settings-section">
+                    <h3>Шрифт и прозрачность сообщений</h3>
+                    <div class="form-group">
+                        <label class="form-label">Размер шрифта в чате</label>
+                        <div class="theme-grid">
+                            <div class="theme-card" onclick="setMsgFontSize('0.82rem')">Мелкий</div>
+                            <div class="theme-card" onclick="setMsgFontSize('0.95rem')">Обычный</div>
+                            <div class="theme-card" onclick="setMsgFontSize('1.12rem')">Крупный</div>
+                            <div class="theme-card" onclick="setMsgFontSize('1.28rem')">Огромный</div>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Плотность фона сообщений (для ярких обоев): <b id="opacityValLabel">55%</b></label>
+                        <input type="range" id="msgOpacityRange" min="15" max="98" value="55" style="width: 100%; accent-color: var(--accent); cursor: pointer;" oninput="setMsgOpacity(this.value)">
+                    </div>
+                </div>
                 <div class="settings-section" id="adminVerifySection" style="display: none;">
                     <h3>👑 Управление верификацией (✓)</h3>
                     <div id="adminVerifyList"></div>
@@ -522,6 +574,7 @@
             </div>
         </div>
     </div>
+
     <div class="modal-backdrop" id="newChatModal">
         <div class="modal-card">
             <div class="modal-header">
@@ -574,24 +627,82 @@
             <div id="forwardChatList" class="user-search-results"></div>
         </div>
     </div>
-
     <div class="modal-backdrop" id="profileModal">
-        <div class="modal-card" style="text-align: center;">
+        <div class="modal-card" style="text-align: center; max-height: 88vh; overflow-y: auto;">
             <div class="modal-header">
-                <h3>Информация о контакте</h3>
+                <h3 id="modalInfoHeaderTitle">Информация</h3>
                 <button type="button" class="close-modal" onclick="closeModal('profileModal')">✕</button>
             </div>
             <div class="avatar" id="modalContactAvatar" style="width: 72px; height: 72px; font-size: 1.6rem; margin: 0 auto 14px;">🌐</div>
             <h3 id="modalContactName" style="margin-bottom: 4px;">Общий чат DOCX</h3>
             <p id="modalContactHandle" style="color: var(--accent); font-size: 0.85rem; margin-bottom: 16px;">@global • в сети</p>
-            <div class="settings-section" style="text-align: left; margin-bottom: 0;">
-                <div class="form-label">О пользователе</div>
+            
+            <div class="settings-section" style="text-align: left; margin-bottom: 12px;">
+                <div class="form-label">Описание</div>
                 <div id="modalContactBio" style="font-size: 0.9rem;">Главный открытый канал для всех пользователей DOCX</div>
+            </div>
+
+            <div id="directChatManageSection" style="display: none; text-align: left;">
+                <div class="settings-section" style="margin-bottom: 0; display: flex; flex-direction: column; gap: 8px;">
+                    <h3>🛡 Действия с чатом</h3>
+                    <button type="button" class="auth-btn" style="margin-top:0; background: rgba(148, 163, 184, 0.15); color: var(--text); border: 1px solid var(--border);" onclick="deleteCurrentChat()">🗑 Удалить чат</button>
+                    <button type="button" class="auth-btn" id="blockUserBtn" style="margin-top:0; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);" onclick="toggleBlockCurrentUser()">🚫 Заблокировать</button>
+                    <button type="button" class="auth-btn" style="margin-top:0; background: rgba(244, 63, 94, 0.22); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.45);" onclick="deleteAndBlockCurrentUser()">⛔ Удалить и заблокировать</button>
+                </div>
+            </div>
+
+            <div id="roomManageSection" style="display: none; text-align: left;">
+                <div class="settings-section" style="margin-bottom: 12px;">
+                    <h3>👥 Участники и приглашения</h3>
+                    <button type="button" class="auth-btn" style="margin-top: 0; margin-bottom: 10px; padding: 11px;" onclick="openInviteMemberModal()">➕ Добавить людей</button>
+                    <div id="roomMembersList" style="font-size: 0.85rem; color: var(--muted);"></div>
+                </div>
+
+                <div class="settings-section" id="roomOwnerSettings" style="margin-bottom: 12px; display: none;">
+                    <h3>⚙ Настройки группы / канала</h3>
+                    <div class="form-group">
+                        <label class="form-label">Иконка комнаты</label>
+                        <div class="emoji-picker">
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('👥')">👥</button>
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('📢')">📢</button>
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('🔥')">🔥</button>
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('🚀')">🚀</button>
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('🎮')">🎮</button>
+                            <button type="button" class="emoji-opt" onclick="setRoomIcon('💻')">💻</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Название</label>
+                        <input type="text" class="auth-input" id="editRoomNameInput">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <input type="text" class="auth-input" id="editRoomBioInput">
+                    </div>
+                    <button type="button" class="auth-btn" style="margin-top: 0;" onclick="saveRoomSettings()">Сохранить настройки</button>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" class="auth-btn" style="margin-top:0; background: rgba(148, 163, 184, 0.15); color: var(--text); border: 1px solid var(--border);" onclick="leaveCurrentRoom()">🚪 Покинуть канал / группу</button>
+                    <button type="button" class="auth-btn" style="margin-top:0; background: rgba(245, 158, 11, 0.18); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4);" onclick="blockCurrentRoom()">🚫 Заблокировать канал / группу</button>
+                    <button type="button" class="auth-btn" id="deleteRoomOwnerBtn" style="margin-top:0; display:none; background: rgba(244, 63, 94, 0.25); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.5);" onclick="deleteRoomForEveryone()">🗑 Удалить канал / группу навсегда</button>
+                </div>
             </div>
         </div>
     </div>
+
+    <div class="modal-backdrop" id="inviteMemberModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Добавить в группу / канал</h3>
+                <button type="button" class="close-modal" onclick="closeModal('inviteMemberModal')">✕</button>
+            </div>
+            <input type="text" class="auth-input" id="inviteSearchInput" placeholder="Поиск друга по @username..." oninput="renderInviteCandidates()">
+            <div id="inviteCandidatesList" class="user-search-results"></div>
+        </div>
+    </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v32';
+        const STORAGE_KEY = 'docx_messenger_state_v34';
         const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
         const VERIFIED_DB_KEY = 'docx_verified_list_v1';
 
@@ -662,7 +773,11 @@
             theme: '',
             wallpaper: '',
             customWallpaperUrl: '',
+            msgFontSize: '0.95rem',
+            msgOpacity: 55,
             stickers: [],
+            blockedUsers: [],
+            blockedRooms: [],
             isFlat: false,
             chats: defaultChats
         };
@@ -780,7 +895,7 @@
             document.getElementById('mainApp').style.display = 'none';
             document.getElementById('authScreen').style.display = 'flex';
         }
-        let activeReplyData = null;
+               let activeReplyData = null;
         let selectedMsgIndex = null;
         let newRoomType = 'group';
         let typingTimer = null;
@@ -882,16 +997,25 @@
         }
 
         function createGroupOrChannel() {
-            const name = document.getElementById('newGroupName').value.trim();
-            const bio = document.getElementById('newGroupBio').value.trim();
-            if (!name) return;
+            const nameInput = document.getElementById('newGroupName');
+            const bioInput = document.getElementById('newGroupBio');
+            const name = nameInput ? nameInput.value.trim() : '';
+            const bio = bioInput ? bioInput.value.trim() : '';
 
+            if (!name) {
+                alert('Введите название группы или канала!');
+                if (nameInput) nameInput.focus();
+                return;
+            }
+
+            const myClean = (appState.user.phone || '').toLowerCase().trim();
             const roomCode = (newRoomType === 'channel' ? 'ch_' : 'grp_') + Date.now().toString(36);
             const newChat = {
                 id: roomCode,
                 roomId: roomCode,
                 isChannel: newRoomType === 'channel',
-                ownerPhone: appState.user.phone.toLowerCase().trim(),
+                ownerPhone: myClean,
+                members: [myClean],
                 name: name,
                 handle: (newRoomType === 'channel' ? '📢 Канал' : '👥 Группа'),
                 bio: bio || (newRoomType === 'channel' ? 'Публичный канал DOCX' : 'Групповой чат DOCX'),
@@ -905,12 +1029,195 @@
             appState.chats.unshift(newChat);
             saveState();
             closeModal('createGroupModal');
-            document.getElementById('newGroupName').value = '';
-            document.getElementById('newGroupBio').value = '';
+            if (nameInput) nameInput.value = '';
+            if (bioInput) bioInput.value = '';
             selectChat(newChat.id, true);
 
             if (typeof publishToPusher === 'function') {
                 publishToPusher("docx-event", { type: "ROOM_CREATED", room: newChat });
+            }
+        }
+        function renderRoomMembersList(chat) {
+            const box = document.getElementById('roomMembersList');
+            if (!box) return;
+            const members = chat.members || [chat.ownerPhone];
+            box.innerHTML = members.map(m => {
+                const acc = accountsDb[m] || onlineUsersMap[m];
+                const label = acc ? `${acc.name} (${m})` : m;
+                const crown = m === chat.ownerPhone ? ' 👑' : '';
+                return `<div style="padding: 4px 0;">• ${label}${crown}</div>`;
+            }).join('');
+        }
+
+        function openInviteMemberModal() {
+            document.getElementById('inviteSearchInput').value = '';
+            renderInviteCandidates();
+            openModal('inviteMemberModal');
+        }
+
+        function renderInviteCandidates() {
+            const listEl = document.getElementById('inviteCandidatesList');
+            const q = document.getElementById('inviteSearchInput').value.toLowerCase().trim();
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || !listEl) return;
+
+            const existingMembers = chat.members || [chat.ownerPhone];
+            const allMap = {};
+            Object.values(accountsDb).forEach(a => { if (a?.phone) allMap[a.phone.toLowerCase().trim()] = a; });
+            Object.values(onlineUsersMap).forEach(u => { if (u?.phone) allMap[u.phone.toLowerCase().trim()] = u; });
+
+            const candidates = Object.values(allMap).filter(u => {
+                const k = u.phone.toLowerCase().trim();
+                return !existingMembers.includes(k) &&
+                    ((u.name && u.name.toLowerCase().includes(q)) || k.includes(q));
+            });
+
+            if (candidates.length === 0) {
+                listEl.innerHTML = '<div style="text-align:center; color:var(--muted); font-size:0.85rem; padding:12px;">Все известные пользователи уже добавлены или список пуст.</div>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            candidates.forEach(u => {
+                const k = u.phone.toLowerCase().trim();
+                const card = document.createElement('div');
+                card.className = 'found-user-card';
+                card.onclick = () => inviteUserToRoom(k, u.name);
+                card.innerHTML = `
+                    <div class="avatar">${(u.name || '??').slice(0, 2).toUpperCase()}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:700; font-size:0.9rem;">${u.name}${getVerifiedBadgeHtml(k)}</div>
+                        <div style="font-size:0.78rem; color:var(--accent);">${u.phone}</div>
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--accent); font-weight:700;">+ Добавить</div>
+                `;
+                listEl.appendChild(card);
+            });
+        }
+
+        function inviteUserToRoom(targetPhone, targetName) {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            if (!chat.members) chat.members = [chat.ownerPhone];
+            if (!chat.members.includes(targetPhone)) {
+                chat.members.push(targetPhone);
+            }
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            chat.messages.push({ text: `➕ В чат добавлен участник: <b>${targetName || targetPhone}</b>`, type: 'in', time: now });
+            saveState();
+            renderRoomMembersList(chat);
+            renderMessages();
+            closeModal('inviteMemberModal');
+
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", {
+                    type: "ROOM_INVITE",
+                    targetPhone: targetPhone,
+                    room: chat
+                });
+            }
+        }
+
+        function setRoomIcon(emoji) {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            chat.initials = emoji;
+            document.getElementById('modalContactAvatar').textContent = emoji;
+        }
+
+        function saveRoomSettings() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            const newName = document.getElementById('editRoomNameInput').value.trim();
+            const newBio = document.getElementById('editRoomBioInput').value.trim();
+            if (newName) chat.name = newName;
+            chat.bio = newBio;
+            saveState();
+            selectChat(chat.id, false);
+            closeModal('profileModal');
+
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", {
+                    type: "ROOM_UPDATED",
+                    roomId: chat.roomId,
+                    name: chat.name,
+                    bio: chat.bio,
+                    initials: chat.initials
+                });
+            }
+        }
+
+        function leaveCurrentRoom() {
+            const idx = appState.chats.findIndex(c => c.id === appState.activeChatId);
+            if (idx === -1) return;
+            appState.chats.splice(idx, 1);
+            saveState();
+            closeModal('profileModal');
+            closeMobileChat();
+            selectChat('global_docx_chat', false);
+        }
+
+        function deleteCurrentChat() {
+            const idx = appState.chats.findIndex(c => c.id === appState.activeChatId);
+            if (idx === -1 || appState.chats[idx].id === 'global_docx_chat') return;
+            appState.chats.splice(idx, 1);
+            saveState();
+            closeModal('profileModal');
+            closeMobileChat();
+            selectChat('global_docx_chat', false);
+        }
+
+        function toggleBlockCurrentUser() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || !chat.handle) return;
+            const targetH = chat.handle.toLowerCase().trim();
+            if (!appState.blockedUsers) appState.blockedUsers = [];
+            const pos = appState.blockedUsers.indexOf(targetH);
+            if (pos === -1) {
+                appState.blockedUsers.push(targetH);
+                alert(`Пользователь ${chat.name} (${chat.handle}) заблокирован.`);
+            } else {
+                appState.blockedUsers.splice(pos, 1);
+                alert(`Пользователь ${chat.name} разблокирован.`);
+            }
+            saveState();
+            selectChat(chat.id, false);
+        }
+
+        function deleteAndBlockCurrentUser() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || !chat.handle) return;
+            const targetH = chat.handle.toLowerCase().trim();
+            if (!appState.blockedUsers) appState.blockedUsers = [];
+            if (!appState.blockedUsers.includes(targetH)) {
+                appState.blockedUsers.push(targetH);
+            }
+            deleteCurrentChat();
+        }
+
+        function blockCurrentRoom() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            const rId = (chat.roomId || chat.id).toLowerCase().trim();
+            if (!appState.blockedRooms) appState.blockedRooms = [];
+            if (!appState.blockedRooms.includes(rId)) {
+                appState.blockedRooms.push(rId);
+            }
+            leaveCurrentRoom();
+            alert(`Канал/группа «${chat.name}» заблокирована и удалена из вашего списка.`);
+        }
+
+        function deleteRoomForEveryone() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat) return;
+            if (!confirm(`Точно удалить «${chat.name}» для всех участников?`)) return;
+            const rId = chat.roomId || chat.id;
+            leaveCurrentRoom();
+            if (typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", {
+                    type: "ROOM_DELETED",
+                    roomId: rId
+                });
             }
         }
         function openMsgActionBar(index) {
@@ -1039,6 +1346,26 @@
             if (!box) return;
             box.className = 'messages-box ' + (appState.wallpaper || '');
             box.style.backgroundImage = (appState.wallpaper === 'wp-custom' && appState.customWallpaperUrl) ? `url(${appState.customWallpaperUrl})` : '';
+        }
+        function setMsgFontSize(sizeVal) {
+            appState.msgFontSize = sizeVal;
+            applyTextAndOpacity();
+            saveState();
+        }
+        function setMsgOpacity(percentVal) {
+            appState.msgOpacity = Number(percentVal);
+            applyTextAndOpacity();
+            saveState();
+        }
+        function applyTextAndOpacity() {
+            const size = appState.msgFontSize || '0.95rem';
+            const opacityPct = appState.msgOpacity !== undefined ? appState.msgOpacity : 55;
+            document.documentElement.style.setProperty('--msg-font-size', size);
+            document.documentElement.style.setProperty('--msg-opacity', (opacityPct / 100).toFixed(2));
+            const label = document.getElementById('opacityValLabel');
+            const slider = document.getElementById('msgOpacityRange');
+            if (label) label.textContent = opacityPct + '%';
+            if (slider) slider.value = opacityPct;
         }
         function switchPickerTab(tab) {
             document.getElementById('tabEmojiBtn').classList.toggle('active', tab === 'emoji');
@@ -1198,7 +1525,6 @@
                 listEl.appendChild(row);
             });
         }
-
         function toggleUserVerification(targetHandle) {
             const clean = targetHandle.toLowerCase().trim();
             if (clean === 'opgk1rill!' || clean === '@opgk1rill!') return;
@@ -1265,7 +1591,6 @@
                 badge.style.display = 'none';
             }
         }
-
         function renderChatList(filter = '') {
             const list = document.getElementById('chatList');
             list.innerHTML = '';
@@ -1298,7 +1623,7 @@
             if (!chat) return;
             const sub = document.getElementById('activeChatSubtitle');
             const modalSub = document.getElementById('modalContactHandle');
-            if (chat.id === 'global_docx_chat' || chat.isChannel || chat.roomId?.startsWith('grp_')) {
+            if (chat.id === 'global_docx_chat' || chat.isChannel || chat.roomId?.startsWith('grp_') || chat.roomId?.startsWith('ch_')) {
                 sub.innerHTML = `<span class="status-dot"></span>${chat.handle || 'в сети'}`;
                 if (modalSub) modalSub.textContent = `${chat.handle || '@chat'} • активен`;
                 return;
@@ -1327,9 +1652,45 @@
 
             updateChatPresenceStatus(chat);
 
+            const isGlobal = chat.id === 'global_docx_chat';
+            const isRoom = Boolean(chat.isChannel || (chat.roomId && (chat.roomId.startsWith('grp_') || chat.roomId.startsWith('ch_'))));
+            const isDirect = !isGlobal && !isRoom;
+
+            const directSection = document.getElementById('directChatManageSection');
+            if (directSection) {
+                directSection.style.display = isDirect ? 'block' : 'none';
+                if (isDirect) {
+                    const targetH = (chat.handle || '').toLowerCase().trim();
+                    const isBlocked = (appState.blockedUsers || []).includes(targetH);
+                    const bBtn = document.getElementById('blockUserBtn');
+                    if (bBtn) bBtn.textContent = isBlocked ? '✅ Разблокировать пользователя' : '🚫 Заблокировать';
+                }
+            }
+
+            const roomSection = document.getElementById('roomManageSection');
+            const ownerSection = document.getElementById('roomOwnerSettings');
+            const delOwnerBtn = document.getElementById('deleteRoomOwnerBtn');
+            if (roomSection) {
+                roomSection.style.display = isRoom ? 'block' : 'none';
+                if (isRoom) {
+                    const isOwner = chat.ownerPhone === (appState.user.phone || '').toLowerCase().trim();
+                    if (ownerSection) {
+                        ownerSection.style.display = isOwner ? 'block' : 'none';
+                        if (isOwner) {
+                            document.getElementById('editRoomNameInput').value = chat.name;
+                            document.getElementById('editRoomBioInput').value = chat.bio || '';
+                        }
+                    }
+                    if (delOwnerBtn) {
+                        delOwnerBtn.style.display = isOwner ? 'block' : 'none';
+                    }
+                    renderRoomMembersList(chat);
+                }
+            }
+
             const inputBar = document.getElementById('chatInputBar');
             if (inputBar) {
-                const isReadOnlyChannel = chat.isChannel && chat.ownerPhone !== appState.user.phone.toLowerCase().trim();
+                const isReadOnlyChannel = chat.isChannel && chat.ownerPhone !== (appState.user.phone || '').toLowerCase().trim();
                 inputBar.style.display = isReadOnlyChannel ? 'none' : 'flex';
             }
 
@@ -1425,10 +1786,10 @@
             closeModal('newChatModal');
             selectChat(chat.id, true);
         }
-
         function bootApp() {
             applyAppearance();
             applyWallpaper();
+            applyTextAndOpacity();
             document.getElementById('myName').innerHTML = appState.user.name + getVerifiedBadgeHtml(appState.user.phone);
             document.getElementById('myPhone').textContent = appState.user.phone;
             document.getElementById('editNameInput').value = appState.user.name;
@@ -1469,7 +1830,6 @@
                 : 'DOCX <span style="color:#f59e0b;">○</span>';
             badge.title = isOnline ? 'Pusher подключен (порт 443)' : 'Подключение к Pusher...';
         }
-
         async function hmacSha256Hex(secret, message) {
             const key = await crypto.subtle.importKey("raw", textEnc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
             const sig = await crypto.subtle.sign("HMAC", key, textEnc.encode(message));
@@ -1546,6 +1906,7 @@
             }
 
             if (packet.type === "ROOM_CREATED" && packet.room) {
+                if ((appState.blockedRooms || []).includes(packet.room.roomId)) return;
                 if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
                     appState.chats.unshift(packet.room);
                     saveState();
@@ -1554,6 +1915,49 @@
                 return;
             }
 
+            if (packet.type === "ROOM_INVITE" && packet.room) {
+                if ((appState.blockedRooms || []).includes(packet.room.roomId)) return;
+                if ((packet.targetPhone || "").toLowerCase().trim() === myPhone) {
+                    if (!appState.chats.some(c => c.roomId === packet.room.roomId)) {
+                        appState.chats.unshift(packet.room);
+                        saveState();
+                        renderChatList();
+                        playNotificationSound();
+                        showInAppTopBanner(packet.room.name, "Вас добавили в группу/канал", packet.room.id);
+                    }
+                }
+                return;
+            }
+
+            if (packet.type === "ROOM_UPDATED" && packet.roomId) {
+                const targetRoom = appState.chats.find(c => c.roomId === packet.roomId);
+                if (targetRoom) {
+                    if (packet.name) targetRoom.name = packet.name;
+                    if (packet.bio !== undefined) targetRoom.bio = packet.bio;
+                    if (packet.initials) targetRoom.initials = packet.initials;
+                    saveState();
+                    renderChatList();
+                    if (appState.activeChatId === targetRoom.id) {
+                        selectChat(targetRoom.id, false);
+                    }
+                }
+                return;
+            }
+
+            if (packet.type === "ROOM_DELETED" && packet.roomId) {
+                const idx = appState.chats.findIndex(c => c.roomId === packet.roomId);
+                if (idx !== -1) {
+                    const wasActive = appState.activeChatId === appState.chats[idx].id;
+                    appState.chats.splice(idx, 1);
+                    saveState();
+                    renderChatList();
+                    if (wasActive) {
+                        closeMobileChat();
+                        selectChat('global_docx_chat', false);
+                    }
+                }
+                return;
+            }
             if (packet.type === "REACTION") {
                 const chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === packet.roomId);
                 if (chat) {
@@ -1602,11 +2006,13 @@
                 if (isMe) return;
 
                 const senderClean = (data.senderPhone || "").toLowerCase().trim();
-                if (senderClean) activeOnlineSet[senderClean] = true;
-
                 const roomId = (data.roomId || "").toLowerCase().trim();
-                let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
 
+                if ((appState.blockedUsers || []).includes(senderClean)) return;
+                if ((appState.blockedRooms || []).includes(roomId)) return;
+
+                if (senderClean) activeOnlineSet[senderClean] = true;
+                let chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === roomId);
                 if (!chat && roomId.includes("__")) {
                     const participants = roomId.split("__");
                     if (!participants.includes(myPhone)) return;
@@ -1680,7 +2086,6 @@
             updateConnectionBadge(false);
 
             pusherSocket = new WebSocket(PUSHER_WS_URL);
-
             pusherSocket.onmessage = async (event) => {
                 try {
                     const frame = JSON.parse(event.data);
