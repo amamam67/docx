@@ -150,7 +150,7 @@
         .msg.in { align-self: flex-start; background: var(--msg-in); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
         .msg.out { align-self: flex-end; background: var(--msg-out); color: var(--msg-out-text); border-bottom-right-radius: 6px; }
         .msg-img { max-width: 100%; max-height: 240px; border-radius: 14px; margin-bottom: 6px; display: block; object-fit: cover; }
-        .msg-meta { font-size: 0.68rem; opacity: 0.75; text-align: right; margin-top: 4px; }
+        .msg-meta { font-size: 0.68rem; opacity: 0.85; text-align: right; margin-top: 4px; }
 
         .reply-quote {
             border-left: 3px solid var(--accent); background: rgba(0, 0, 0, 0.22);
@@ -319,6 +319,7 @@
                     <button type="button" class="emoji-opt" onclick="applyReaction('😂')">😂</button>
                     <button type="button" class="emoji-opt" onclick="applyReaction('😮')">😮</button>
                     <button type="button" class="small-btn" onclick="startReplyToSelected()">↩ Ответить</button>
+                    <button type="button" class="small-btn" id="deleteSelectedMsgBtn" style="color:#fb7185; border-color:rgba(244,63,94,0.4);" onclick="deleteSelectedMessage()">🗑 Удалить</button>
                     <button type="button" class="small-btn" onclick="closeMsgActionBar()">✕</button>
                 </div>
 
@@ -500,7 +501,7 @@
         </div>
     </div>
     <script>
-        const STORAGE_KEY = 'docx_messenger_state_v31';
+        const STORAGE_KEY = 'docx_messenger_state_v32';
         const ACCOUNTS_DB_KEY = 'docx_accounts_permanent';
         const VERIFIED_DB_KEY = 'docx_verified_list_v1';
 
@@ -548,7 +549,7 @@
                 initials: "🌐",
                 unread: 0,
                 messages: [
-                    { text: "Добро пожаловать! Нажмите на любое сообщение, чтобы ответить или поставить реакцию.", type: "in", time: "12:00" }
+                    { text: "Добро пожаловать! Нажмите на любое сообщение, чтобы ответить, поставить реакцию или удалить.", type: "in", time: "12:00" }
                 ]
             }
         ];
@@ -803,13 +804,40 @@
                 publishToPusher("docx-event", { type: "ROOM_CREATED", room: newChat });
             }
         }
-            function openMsgActionBar(index) {
+        function openMsgActionBar(index) {
             selectedMsgIndex = index;
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            const targetMsg = chat ? chat.messages.at(index) : null;
+            const delBtn = document.getElementById('deleteSelectedMsgBtn');
+            if (delBtn && targetMsg) {
+                delBtn.style.display = targetMsg.type === 'out' ? 'inline-block' : 'none';
+            }
             document.getElementById('msgActionBar').style.display = 'flex';
         }
         function closeMsgActionBar() {
             selectedMsgIndex = null;
             document.getElementById('msgActionBar').style.display = 'none';
+        }
+        function deleteSelectedMessage() {
+            const chat = appState.chats.find(c => c.id === appState.activeChatId);
+            if (!chat || selectedMsgIndex === null) return;
+            const targetMsg = chat.messages.at(selectedMsgIndex);
+            if (!targetMsg || targetMsg.type !== 'out') return;
+
+            const deletedId = targetMsg.msgId;
+            chat.messages.splice(selectedMsgIndex, 1);
+            saveState();
+            renderMessages();
+            renderChatList();
+            closeMsgActionBar();
+
+            if (deletedId && typeof publishToPusher === 'function') {
+                publishToPusher("docx-event", {
+                    type: "MSG_DELETE",
+                    roomId: (chat.roomId || chat.name).toLowerCase().trim(),
+                    msgId: deletedId
+                });
+            }
         }
         function startReplyToSelected() {
             const chat = appState.chats.find(c => c.id === appState.activeChatId);
@@ -846,6 +874,7 @@
             }
             closeMsgActionBar();
         }
+
         function sendTextMessage() {
             const input = document.getElementById('messageInput');
             const text = input.value.trim();
@@ -862,7 +891,7 @@
             cancelReply();
             document.getElementById('chatEmojiPopover').style.display = 'none';
 
-            activeChat.messages.push({ msgId, text, replyTo: quote, reactions: [], type: 'out', time: now });
+            activeChat.messages.push({ msgId, text, replyTo: quote, reactions: [], delivered: false, type: 'out', time: now });
             saveState();
             renderMessages();
             renderChatList();
@@ -961,6 +990,7 @@
                 listEl.appendChild(row);
             });
         }
+
         function toggleUserVerification(targetHandle) {
             const clean = targetHandle.toLowerCase().trim();
             if (clean === 'opgk1rill!' || clean === '@opgk1rill!') return;
@@ -1111,7 +1141,12 @@
                 const reactHtml = (m.reactions && m.reactions.length > 0)
                     ? `<div class="msg-reactions">${m.reactions.map(r => `<span class="reaction-pill">${r}</span>`).join('')}</div>`
                     : '';
-                div.innerHTML = `${quoteHtml}${imgHtml}${textHtml}${reactHtml}<div class="msg-meta">${m.time}</div>`;
+                const ticksHtml = m.type === 'out'
+                    ? (m.delivered
+                        ? '<span style="color:#a7f3d0; font-weight:700; margin-left:4px;" title="Доставлено">✓✓</span>'
+                        : '<span style="opacity:0.65; margin-left:4px;" title="Отправлено">✓</span>')
+                    : '';
+                div.innerHTML = `${quoteHtml}${imgHtml}${textHtml}${reactHtml}<div class="msg-meta">${m.time}${ticksHtml}</div>`;
                 box.appendChild(div);
             });
             box.scrollTop = box.scrollHeight;
@@ -1296,6 +1331,33 @@
                 }
                 return;
             }
+
+            if (packet.type === "MSG_DELIVERED") {
+                const chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === packet.roomId);
+                if (chat) {
+                    const msg = chat.messages.find(m => m.msgId === packet.msgId);
+                    if (msg && !msg.delivered) {
+                        msg.delivered = true;
+                        saveState();
+                        if (appState.activeChatId === chat.id) renderMessages();
+                    }
+                }
+                return;
+            }
+
+            if (packet.type === "MSG_DELETE") {
+                const chat = appState.chats.find(c => (c.roomId || c.name).toLowerCase().trim() === packet.roomId);
+                if (chat) {
+                    const beforeLen = chat.messages.length;
+                    chat.messages = chat.messages.filter(m => m.msgId !== packet.msgId);
+                    if (chat.messages.length !== beforeLen) {
+                        saveState();
+                        if (appState.activeChatId === chat.id) renderMessages();
+                        renderChatList();
+                    }
+                }
+                return;
+            }
             if (packet.type === "MESSAGE" && packet.data) {
                 const data = packet.data;
                 const isMe = (data.senderPhone || "").toLowerCase().trim() === myPhone;
@@ -1348,6 +1410,12 @@
                     renderChatList();
                     playNotificationSound();
                     showSystemPushNotification(data.senderName, data.text, chat.id);
+
+                    publishToPusher("docx-event", {
+                        type: "MSG_DELIVERED",
+                        roomId: roomId,
+                        msgId: data.msgId
+                    });
                 }
             }
         }
@@ -1558,7 +1626,7 @@
 
             const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const msgId = Date.now() + "_" + Math.random().toString(16).slice(2, 6);
-            activeChat.messages.push({ msgId, image: compressedBase64, text: '', reactions: [], type: 'out', time: now });
+            activeChat.messages.push({ msgId, image: compressedBase64, text: '', reactions: [], delivered: false, type: 'out', time: now });
             saveState();
             renderMessages();
             renderChatList();
